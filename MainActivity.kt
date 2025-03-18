@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
                         PantallaFiguras(navController = navController)
                     }
                     composable ("editarfoto") {
-                        EditarFotoScreen(navHostController)
+                        PantallaEditarFoto(navHostController)
                     }
                 }
             }
