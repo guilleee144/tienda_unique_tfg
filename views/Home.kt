@@ -25,57 +25,17 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.crud.Producto
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import com.example.uniqueartifacts.crud.ProductoRepository
 
 @Composable
 fun Home(navController: NavController) {
-    // Estado para almacenar los productos (figuras de Bleach)
+    // Estado para almacenar las figuras de Bleach
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
 
-    // Se carga la ruta FIGURAS -> Anime -> productos -> Bleach
+
     LaunchedEffect(Unit) {
-        val db = FirebaseFirestore.getInstance()
-        val docRef = db.collection("FIGURAS")
-            .document("Anime")
-            .collection("productos")
-            .document("Bleach")
-
-        try {
-            val documentSnapshot = docRef.get().await()
-            if (documentSnapshot.exists()) {
-                val data = documentSnapshot.data // Mapa con todas las figuras
-                if (data != null) {
-                    val figureList = mutableListOf<Producto>()
-                    for ((key, value) in data) {
-                        // key = nombre de la figura (p. ej. "Aizen (Exclusiva Cara)")
-                        // value = {precio=..., stock=..., imagen=..., ...}
-                        if (value is Map<*, *>) {
-                            val precio = value["precio"] as? Number ?: 0.0
-                            val stock = value["stock"] as? Number ?: 0
-                            val imagen = value["imagen"] as? String ?: ""
-                            val imagen2 = value["imagen2"] as? String
-                            val imagen3 = value["imagen3"] as? String
-
-                            figureList.add(
-                                Producto(
-                                    id = null,           // No hay ID de documento individual
-                                    nombre = key,        // Nombre de la figura
-                                    precio = precio.toDouble(),
-                                    stock = stock.toInt(),
-                                    imagen = imagen,
-                                    imagen2 = imagen2,
-                                    imagen3 = imagen3
-                                )
-                            )
-                        }
-                    }
-                    productos = figureList
-                }
-            }
-        } catch (e: Exception) {
-            // Manejo de errores
-            productos = emptyList()
+        ProductoRepository().getAllProductos("FIGURAS/Anime/productos/Bleach") { list ->
+            productos = list
         }
     }
 
@@ -111,14 +71,12 @@ fun Home(navController: NavController) {
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
-
                         // Logo en el centro
                         Image(
                             painter = painterResource(id = R.drawable.logo_rojo),
                             contentDescription = "Logo",
                             modifier = Modifier.size(50.dp)
                         )
-
                         // Icono del carrito
                         Image(
                             painter = painterResource(id = R.drawable.cesta),
@@ -131,7 +89,6 @@ fun Home(navController: NavController) {
 
                     // Barra de búsqueda
                     var searchText by remember { mutableStateOf("") }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -161,7 +118,7 @@ fun Home(navController: NavController) {
                                 .fillMaxWidth(0.92f)
                                 .height(50.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFC3C3C3)),
+                                .background(Color(0xFFC3C3C3))
                         )
                     }
                 }
@@ -175,9 +132,14 @@ fun Home(navController: NavController) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
-                // Primera categoría
+                // Categoría Figuras
                 item {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .clickable { navController.navigate("figuras") },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Image(
                             painter = painterResource(id = R.drawable.zoro),
                             contentDescription = "Figuras",
@@ -196,7 +158,7 @@ fun Home(navController: NavController) {
                     }
                 }
 
-                // Segunda categoría
+                // Categoría Funko Pops
                 item {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -216,8 +178,7 @@ fun Home(navController: NavController) {
                         )
                     }
                 }
-
-                // Tercera categoría
+                // Categoría Cartas
                 item {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -237,8 +198,7 @@ fun Home(navController: NavController) {
                         )
                     }
                 }
-
-                // Cuarta categoría
+                // Categoría Camisetas
                 item {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -258,8 +218,7 @@ fun Home(navController: NavController) {
                         )
                     }
                 }
-
-                // Quinta categoría
+                // Categoría Tazas
                 item {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -295,8 +254,7 @@ fun Home(navController: NavController) {
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
-                    modifier = Modifier
-                        .padding(bottom = 8.dp, start = 5.dp)
+                    modifier = Modifier.padding(bottom = 8.dp, start = 5.dp)
                 )
 
                 // Imagen del Banner
@@ -320,7 +278,7 @@ fun Home(navController: NavController) {
                                 modifier = Modifier
                                     .width(120.dp)
                                     .clickable {
-                                        // Aquí podrías navegar al detalle del producto
+                                        // Aquí podrías navegar al detalle del producto, por ejemplo:
                                         // navController.navigate("detalle/${producto.id}")
                                     },
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -363,7 +321,6 @@ fun Home(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 var selectedItem by remember { mutableStateOf("HOME") }
-
                 listOf(
                     "HOME" to R.drawable.logo_rojo,
                     "BUSCAR" to R.drawable.lupa,
