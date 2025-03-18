@@ -18,7 +18,7 @@ fun NavigationWrapper (navHostController: NavHostController) {
         composable ("pantallaInicio") {PantallaInicio(navHostController)}
         composable ("pantallaHome") {Home(navHostController)}
         composable ("figuras") {PantallaFiguras(navHostController)}
-        composable ("editarfoto") {EditarFotoScreen(navHostController)}
+       composable ("editarfoto") {PantallaEditarFoto(navHostController)}
         
 
 
