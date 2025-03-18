@@ -21,7 +21,7 @@ import androidx.navigation.NavController
 import com.example.uniqueartifacts.R
 
 @Composable
-fun EditarFotoScreen(navController: NavController) {
+fun PantallaEditarFoto(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
