@@ -12,10 +12,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.uniqueartifacts.ui.theme.UniqueArtifactsTheme
 import com.example.uniqueartifacts.views.Home
 import com.example.uniqueartifacts.views.PantallaCarga
+import com.example.uniqueartifacts.views.PantallaFiguras
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
         enableEdgeToEdge()
         setContent {
             UniqueArtifactsTheme {
@@ -30,6 +33,13 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("home") {
                         Home(navController = navController)
+                    }
+                    // Nueva ruta para la pantalla de figuras
+                    composable("figuras") {
+                        PantallaFiguras(navController = navController)
+                    }
+                    composable ("editarfoto") {
+                        EditarFotoScreen(navHostController)
                     }
                 }
             }
