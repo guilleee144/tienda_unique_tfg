@@ -1,0 +1,232 @@
+package com.example.uniqueartifacts.views
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import kotlinx.coroutines.launch
+import com.example.uniqueartifacts.R
+
+@Composable
+fun Perfil(navController: NavController) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = false, // ✅ Evita que el usuario lo abra deslizando
+        drawerContent = {
+            Row {
+                // ✅ Menú lateral que ocupa 3/4 de la pantalla
+                DismissibleDrawerSheet(
+                    modifier = Modifier.fillMaxWidth(0.75f),
+                    drawerContainerColor = Color.Black
+                ) {
+                    MenuLateral { scope.launch { drawerState.close() } }
+                }
+
+                // ✅ Área clickeable fuera del menú para cerrarlo
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { scope.launch { drawerState.close() } }
+                )
+            }
+        },
+        content = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Navbar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(56.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Imagen de perfil con clic para abrir el menú lateral
+                        Image(
+                            painter = painterResource(id = R.drawable.grefg),
+                            contentDescription = "Profile",
+                            modifier = Modifier
+                                .size(40.dp)
+
+                                .clip(CircleShape)
+                                .clickable { scope.launch { drawerState.open() } }, // ✅ Abre el menú lateral
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun MenuLateral(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Imagen de perfil
+        Image(
+            painter = painterResource(id = R.drawable.grefg),
+            contentDescription = "Profile",
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // Nombre del usuario
+        Text(
+            text = "David Muñoz",
+            fontSize = 24.sp,
+            color = Color.White,
+        )
+
+        Spacer(modifier = Modifier.height(70.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.usuario),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Perfil",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.logo_blanco),
+                    contentDescription = "Puntos",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Puntos",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.premium),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Premium",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onClose,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.campana),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Notificaciones",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+    }
+}
