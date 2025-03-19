@@ -1,0 +1,314 @@
+package com.example.uniqueartifacts.views
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.uniqueartifacts.R
+
+@Composable
+fun Puntos_Ofertas(navController: NavController) {
+    var selectedTab by remember { mutableStateOf("Ofertas") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // 🔹 Encabezado
+        EncabezadoPuntos(navController)
+
+        // 🔹 Contenedor gris con esquinas redondeadas
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF444444), shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .padding(top = 10.dp)
+        ) {
+            // 🔹 TABS "OFERTAS" Y "CUPONES"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF444444), shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TabButton("Ofertas", selectedTab) { selectedTab = "Ofertas" }
+                TabButton("Cupones", selectedTab) { selectedTab = "Cupones" }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 🔹 CONTENIDO: OFERTAS O CUPONES
+            if (selectedTab == "Ofertas") {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(ofertas.size) { index ->
+                        OfertaItem(oferta = ofertas[index])
+                    }
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(cupones.size) { index ->
+                        CuponItem(cupon = cupones[index])
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CuponItem(cupon: Cupon) {
+
+}
+
+
+// 🔹 ENCABEZADO
+@Composable
+fun EncabezadoPuntos(navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Black)
+            .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Image(
+                    painter = painterResource(id = R.drawable.atras), // Icono de flecha
+                    contentDescription = "Volver",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(105.dp))
+
+            Text(
+                text = "Puntos",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f),
+            )
+
+            Spacer(modifier = Modifier.size(30.dp))
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+            Text(
+                text = "UniquePoints disponibles",
+                fontSize = 16.sp,
+                color = Color.White
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Text(
+                    text = "290",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Image(
+                    painter = painterResource(id = R.drawable.logo_blanco),
+                    contentDescription = "Puntos",
+                    modifier = Modifier.size(22.dp)
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Button(
+                    onClick = { /* Acción de ver ofertas */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE64949)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    Text(text = "Ver Mis ofertas", color = Color.White, fontSize = 14.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(
+                text = "Actualizar UniquePoints",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.clickable { /* Acción para actualizar */ }
+            )
+        }
+    }
+}
+
+// 🔹 COMPONENTE PARA EL BOTÓN DE LOS TABS
+@Composable
+fun TabButton(text: String, selectedTab: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 16.sp,
+            color = if (text == selectedTab) Color.White else Color.Gray
+        )
+        if (text == selectedTab) {
+            Divider(color = Color.White, thickness = 2.dp, modifier = Modifier.width(40.dp))
+        }
+    }
+}
+
+// 🔹 MODELO DE DATOS PARA OFERTAS Y CUPONES
+data class Oferta(val titulo: String, val imagen: Int, val precio: String)
+data class Cupon(val titulo: String, val imagen: Int, val descuento: String)
+
+// 🔹 LISTA DE OFERTAS
+val ofertas = listOf(
+    Oferta("Camiseta Merchandising Jujutsu Kaisen", R.drawable.camiseta2, "2500"),
+    Oferta("x3 Sobres Pokémon Sol y Luna Vínculos Indestructibles", R.drawable.cartas_pokemon, "6300"),
+    Oferta("Figura Naruto", R.drawable.figura_naruto, "12400")
+)
+
+// 🔹 LISTA DE CUPONES
+val cupones = listOf(
+    Cupon("Figura Brook", R.drawable.brook, "10% dcto"),
+    Cupon("Funko Pop 2x1", R.drawable.pop_sustituir, "2x1"),
+    Cupon("Descuento Premium", R.drawable.premium, "50% OFF"),
+    Cupon("Camiseta Luffy", R.drawable.camiseta2, "20% dcto")
+)
+
+// 🔹 COMPONENTE PARA UNA OFERTA INDIVIDUAL
+@Composable
+fun OfertaItem(oferta: Oferta) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .background(Color.White, shape = RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 🔒 Encabezado "Oferta Bloqueada"
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(bottom = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.candado_negro), // 🔒 Icono de candado
+                        contentDescription = "Bloqueado",
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Oferta Bloqueada",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+            }
+        }
+
+        // 🔹 Contenedor de la oferta
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 🔹 Imagen del producto
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(6.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = oferta.imagen),
+                    contentDescription = oferta.titulo,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(4.dp)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 🔹 Precio con icono de puntos
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = oferta.precio,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_gris), // ⚡ Icono de puntos
+                        contentDescription = "Puntos",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // 🔹 Línea separadora
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(60.dp)
+                    .background(Color.Black)
+            )
+
+            // 🔹 Detalles de la oferta
+            Column(
+                modifier = Modifier
+                    .weight(1.5f)
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = oferta.titulo,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Válido en pedidos de más de 60 €",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
