@@ -1,0 +1,215 @@
+package com.example.uniqueartifacts.views
+
+import android.widget.Space
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.uniqueartifacts.R
+
+@Composable
+fun Perfil(navController: NavController) {
+    var isBankAccountVisible by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 60.dp, bottom = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = { navController.navigate("pantallaHome") }) {
+                Image(
+                    painter = painterResource(id = R.drawable.atras),
+                    contentDescription = "Volver",
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Text(
+                text = "Perfil",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            IconButton(onClick = { navController.navigate("pantallaCarga")}) {
+                Image(
+                    painter = painterResource(id = R.drawable.log_out), // 🔄 Ícono de actualizar
+                    contentDescription = "Actualizar",
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        // 🔹 Imagen de perfil y nombre
+        Image(
+            painter = painterResource(id = R.drawable.grefg),
+            contentDescription = "Profile",
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+        )
+
+        Text(
+            text = "David Muñoz",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.padding(top = 10.dp, bottom = 20.dp)
+        )
+
+        // 🔹 Lista de datos personales con espacios mejorados
+        PerfilCampo("Nombre", "David")
+        Spacer(modifier = Modifier.height(15.dp))
+        PerfilCampo("Apellidos", "Muñoz Blanco")
+        Spacer(modifier = Modifier.height(15.dp))
+        PerfilCampo("Correo electrónico", "David.muñoz23@gmail.com")
+        Spacer(modifier = Modifier.height(15.dp))
+        PerfilCampo("Número de Teléfono", "21321653234")
+        Spacer(modifier = Modifier.height(15.dp))
+        PerfilCampo("Fecha Nacimiento", "21/3/2002")
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // 🔹 Campo de cuenta bancaria con botón de visibilidad
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Cuenta Bancaria",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically, // ✅ Asegura la alineación vertical
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isBankAccountVisible) "21321653234" else "********************",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f) // ✅ Permite que el texto ocupe el espacio disponible sin afectar el icono
+                    )
+
+                    IconButton(
+                        onClick = { isBankAccountVisible = !isBankAccountVisible },
+                        modifier = Modifier
+                            .size(30.dp) // Ajuste exacto del tamaño del botón para mayor precisión
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ocultar), // 👁‍🗨 Icono de visibilidad
+                            contentDescription = "Mostrar/Ocultar Cuenta",
+                            modifier = Modifier.size(24.dp) // ✅ Tamaño del icono ajustado para alineación perfecta
+                        )
+                    }
+                }
+                Divider(color = Color.Gray, thickness = 1.dp)
+            }
+        }
+
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // 🔹 Logo centrado en la parte inferior
+        Image(
+            painter = painterResource(id = R.drawable.logo_gris_grande),
+            contentDescription = "Logo_gris_grande",
+            modifier = Modifier
+                .size(120.dp)
+        )
+        Spacer(modifier = Modifier.height(60.dp))
+    }
+}
+
+@Composable
+fun PerfilCampo(label: String, initialValue: String) {
+    var isEditing by remember { mutableStateOf(false) }  // 🔄 Estado para saber si está en modo edición
+    var textValue by remember { mutableStateOf(initialValue) }  // 📝 Estado del texto
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp),
+            verticalAlignment = Alignment.CenterVertically, // ✅ Asegura que el texto y el icono estén alineados
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            if (isEditing) {
+                // 🔹 Campo de texto editable SIN fondo y SIN borde
+                BasicTextField(
+                    value = textValue,
+                    onValueChange = { textValue = it },
+                    textStyle = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    ),
+                    modifier = Modifier
+                        .weight(1f) // ✅ Permite que el campo de texto se expanda sin afectar el icono
+                        .background(Color.Transparent) // ❌ Evita el fondo blanco
+                        .border(0.dp, Color.Transparent) // ❌ Sin bordes
+                        .clickable { isEditing = true } // ✅ Habilita clic para edición
+                )
+            } else {
+                // 🔹 Texto normal cuando NO está en edición
+                Text(
+                    text = textValue,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { isEditing = true } // ✅ Habilita clic para edición
+                )
+            }
+
+            // 🔹 Ícono de edición alineado perfectamente
+            IconButton(
+                onClick = { isEditing = true },
+                modifier = Modifier.size(30.dp) // ✅ Tamaño exacto del botón para alineación correcta
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.lapiz), // ✏️ Icono de edición
+                    contentDescription = "Editar $label",
+                    modifier = Modifier.size(24.dp) // ✅ Tamaño del icono ajustado para alineación perfecta
+                )
+            }
+        }
+        Divider(color = Color.Gray, thickness = 1.dp)
+    }
+}
