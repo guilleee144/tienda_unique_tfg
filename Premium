@@ -1,0 +1,165 @@
+package com.example.uniqueartifacts.views
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.uniqueartifacts.R
+
+@Composable
+fun Premium(navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(horizontal = 16.dp), // 🔹 Padding horizontal uniforme
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 🔹 Encabezado con botón de volver
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 50.dp, bottom = 20.dp), // 🔹 Más espacio en la parte superior
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Image(
+                    painter = painterResource(id = R.drawable.atras),
+                    contentDescription = "Volver",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(90.dp))
+
+            Text(
+                text = "Premium",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp)) // 🔹 Espaciado mayor entre título y subtítulo
+
+        // 🔹 Subtítulo
+        Text(
+            text = "Siente la diferencia",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(26.dp))
+
+        Text(
+            text = "Descubre las ventajas de nuestro Plan Premium",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(60.dp)) // 🔹 Más espacio antes de la tabla
+
+        // 🔹 Tabla de Beneficios
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF222222), shape = RoundedCornerShape(12.dp)) // 🔹 Bordes más suaves
+                .padding(vertical = 16.dp, horizontal = 20.dp) // 🔹 Padding interno
+        ) {
+            // 🔹 Encabezado de la tabla
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Qué incluye", color = Color.White, fontSize = 14.sp)
+                Row {
+                    Text(text = "FREE", color = Color.White, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.premium),
+                        contentDescription = "Premium",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Divider(color = Color.Gray, thickness = 1.dp)
+
+            // 🔹 Beneficios con espacios ajustados
+            BeneficioItem("Envío de 24 - 48 horas", true)
+            BeneficioItem("Sorteos Exclusivos", true)
+            BeneficioItem("Artículos únicos", true)
+            BeneficioItem("Unidades Reservadas", true)
+        }
+
+        Spacer(modifier = Modifier.height(50.dp)) // 🔹 Espaciado mayor antes del botón de compra
+
+        // 🔹 Botón de Compra
+        Button(
+            onClick = { /* Acción de comprar premium */ },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE64949)), // Rojo
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .height(50.dp)
+        ) {
+            Text(text = "Comprar ahora", color = Color.White, fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "2,40€ / mes", color = Color.White, fontSize = 14.sp)
+        }
+
+        Spacer(modifier = Modifier.height(100.dp)) // 🔹 Más espacio antes del logo
+
+        // 🔹 Logo en la parte inferior
+        Image(
+            painter = painterResource(id = R.drawable.logo_gris_grande),
+            contentDescription = "Logo_gris",
+            modifier = Modifier.size(120.dp)
+        )
+    }
+}
+
+// 🔹 Beneficio de la Tabla (Iconos de ✅ y --)
+@Composable
+fun BeneficioItem(texto: String, esPremium: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp), // 🔹 Espaciado uniforme en cada fila
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = texto, color = Color.White, fontSize = 14.sp)
+
+        Row {
+            Text(text = "--", color = Color.Gray, fontSize = 14.sp)
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Image(
+                painter = painterResource(
+                    id = if (esPremium) R.drawable.check else R.drawable.check
+                ),
+                contentDescription = "Check",
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+
+    Divider(color = Color.Gray, thickness = 1.dp)
+}
+
