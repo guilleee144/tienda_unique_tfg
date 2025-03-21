@@ -5,11 +5,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,17 +55,19 @@ fun Puntos_Ofertas(navController: NavController) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 🔹 CONTENIDO: OFERTAS O CUPONES
+            // Reemplaza la parte donde muestras los cupones con este código
             if (selectedTab == "Ofertas") {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(ofertas.size) { index ->
-                        OfertaItem(oferta = ofertas[index])
-                    }
-                }
+                ListaDeOfertas(ofertas)
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(cupones.size) { index ->
-                        CuponItem(cupon = cupones[index])
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2), // 🔹 Muestra 2 cupones por fila
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), // 🔹 Márgenes alrededor de la cuadrícula
+                    horizontalArrangement = Arrangement.spacedBy(12.dp), // 🔹 Espaciado horizontal entre los elementos
+                    verticalArrangement = Arrangement.spacedBy(12.dp) // 🔹 Espaciado vertical entre los elementos
+                ) {
+                    items(cupones) { cupon ->
+                        CuponItem(cupon = cupon)
                     }
                 }
             }
@@ -71,8 +77,41 @@ fun Puntos_Ofertas(navController: NavController) {
 
 @Composable
 fun CuponItem(cupon: Cupon) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, shape = RoundedCornerShape(12.dp)) // 🔹 Fondo blanco con bordes redondeados
+    ) {
+        // 🔹 Contenedor principal para manejar capas
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)// Ajusta el tamaño total del cupón
+        ) {
+            // 🔹 Capa 1: Imagen principal del cupón
+            Image(
+                painter = painterResource(id = cupon.imagen),
+                contentDescription = cupon.titulo,
+                modifier = Modifier
+                    .fillMaxSize() // 🔹 La imagen ocupa todo el espacio del contenedor
+                    .clip(RoundedCornerShape(12.dp)) // 🔹 Mantiene los bordes redondeados
+            )
 
+            // 🔹 Capa 2: Imagen del descuento en la esquina inferior derecha
+            Image(
+                painter = painterResource(id = R.drawable.descuento20), // 📌 Imagen del descuento
+                contentDescription = "Descuento",
+                modifier = Modifier
+                    .size(80.dp) // 🔹 Ajusta el tamaño del descuento
+                    .align(Alignment.BottomEnd) // 🔹 Lo posiciona en la esquina inferior derecha
+                    .padding(8.dp) // 🔹 Agrega un pequeño margen desde los bordes
+            )
+        }
+    }
 }
+
+
+
 
 
 // 🔹 ENCABEZADO
@@ -198,116 +237,127 @@ val ofertas = listOf(
 val cupones = listOf(
     Cupon("Figura Brook", R.drawable.brook, "10% dcto"),
     Cupon("Funko Pop 2x1", R.drawable.pop_sustituir, "2x1"),
-    Cupon("Descuento Premium", R.drawable.premium, "50% OFF"),
+    Cupon("Descuento Premium", R.drawable.descuento, "50% OFF"),
     Cupon("Camiseta Luffy", R.drawable.camiseta2, "20% dcto")
 )
 
-// 🔹 COMPONENTE PARA UNA OFERTA INDIVIDUAL
+@Composable
+fun ListaDeOfertas(ofertas: List<Oferta>) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp) // ✅ Espaciado lateral general para TODA la lista
+    ) {
+        items(ofertas.size) { index ->
+            OfertaItem(oferta = ofertas[index])
+            Spacer(modifier = Modifier.height(30.dp)) // ✅ Espaciado entre tarjetas
+        }
+    }
+}
+
 @Composable
 fun OfertaItem(oferta: Oferta) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(horizontal = 8.dp) // ✅ Espaciado lateral individual de cada tarjeta
             .background(Color.White, shape = RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .padding(16.dp) // ✅ Espaciado interno
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column {
             // 🔒 Encabezado "Oferta Bloqueada"
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(bottom = 8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.candado_negro), // 🔒 Icono de candado
-                        contentDescription = "Bloqueado",
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Oferta Bloqueada",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                }
-            }
-        }
-
-        // 🔹 Contenedor de la oferta
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 🔹 Imagen del producto
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(6.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = oferta.imagen),
-                    contentDescription = oferta.titulo,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .padding(4.dp)
+                    painter = painterResource(id = R.drawable.candado_negro),
+                    contentDescription = "Bloqueado",
+                    modifier = Modifier.size(16.dp)
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // 🔹 Precio con icono de puntos
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = oferta.precio,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_gris), // ⚡ Icono de puntos
-                        contentDescription = "Puntos",
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
-            // 🔹 Línea separadora
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(60.dp)
-                    .background(Color.Black)
-            )
-
-            // 🔹 Detalles de la oferta
-            Column(
-                modifier = Modifier
-                    .weight(1.5f)
-                    .padding(12.dp)
-            ) {
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = oferta.titulo,
+                    text = "Oferta Bloqueada",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
+            }
 
-                Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = "Válido en pedidos de más de 60 €",
-                    fontSize = 12.sp,
-                    color = Color.Gray
+            // 🔹 Contenedor de la oferta
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // 🔹 Imagen del producto
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(6.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = oferta.imagen),
+                        contentDescription = oferta.titulo,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .padding(4.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // 🔹 Precio con icono de puntos
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = oferta.precio,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_gris),
+                            contentDescription = "Puntos",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // 🔹 Línea separadora
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(60.dp)
+                        .background(Color.Black)
                 )
+
+                // 🔹 Detalles de la oferta
+                Column(
+                    modifier = Modifier
+                        .weight(2f)
+                        .padding(start = 12.dp)
+                ) {
+                    Text(
+                        text = oferta.titulo,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "Válido en pedidos de más de 60 €",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }
