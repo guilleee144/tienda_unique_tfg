@@ -1,0 +1,669 @@
+package com.example.uniqueartifacts.views
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DismissibleDrawerSheet
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.uniqueartifacts.R
+import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import kotlinx.coroutines.launch
+
+
+@Composable
+fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = false, // Evita que el usuario lo abra deslizando
+        drawerContent = {
+            Row {
+                DismissibleDrawerSheet(
+                    modifier = Modifier.fillMaxWidth(0.75f),
+                    drawerContainerColor = Color.Black
+                ) {
+                    MenuLateral(navController = navController) {
+                        scope.launch { drawerState.close() }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { scope.launch { drawerState.close() } }
+                )
+            }
+        },
+        content = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 100.dp)
+                ) {
+                    // 🔹 Navbar con fondo negro (todo igual que antes...)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black)
+                            .padding(top = 40.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Spacer(modifier = Modifier.weight(0.1f))
+                                Image(
+                                    painter = painterResource(id = R.drawable.grefg),
+                                    contentDescription = "Profile",
+                                    modifier = Modifier
+                                        .size(45.dp)
+                                        .clip(CircleShape)
+                                        .clickable { scope.launch { drawerState.open() } },
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.weight(0.9f))
+                                Image(
+                                    painter = painterResource(id = R.drawable.logo_rojo),
+                                    contentDescription = "Logo",
+                                    modifier = Modifier.size(50.dp)
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Image(
+                                    painter = painterResource(id = R.drawable.cesta),
+                                    contentDescription = "Carrito",
+                                    modifier = Modifier.size(30.dp)
+                                )
+                                Spacer(modifier = Modifier.weight(0.1f))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            var searchText by remember { mutableStateOf("") }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .background(Color.Transparent),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                OutlinedTextField(
+                                    value = searchText,
+                                    onValueChange = { searchText = it },
+                                    placeholder = { Text("Buscar ...", color = Color.Gray) },
+                                    leadingIcon = {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.lupa_negra),
+                                            contentDescription = "Buscar",
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.micro),
+                                            contentDescription = "Micrófono",
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.92f)
+                                        .height(50.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFC3C3C3))
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(15.dp))
+
+                    val scrollState = rememberScrollState()
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .background(Color.White)
+                                .padding(bottom = 100.dp)
+                        ) {
+                            // 🔹 CATEGORÍAS
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp)
+                            ) {
+                                item { CategoriaItem("Figuras", R.drawable.zoro) }
+                                item { CategoriaItem("Funko Pops", R.drawable.pops) }
+                                item { CategoriaItem("Cartas", R.drawable.cartas) }
+                                item { CategoriaItem("Camisetas", R.drawable.camiseta) }
+                                item { CategoriaItem("Tazas", R.drawable.taza) }
+                            }
+
+                            Spacer(modifier = Modifier.height(25.dp))
+
+                            // 🔹 NUEVA COLECCIÓN
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Text(
+                                    text = "Nueva Colección",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(bottom = 8.dp, start = 5.dp)
+                                )
+
+                                Image(
+                                    painter = painterResource(id = R.drawable.banner_pokemon),
+                                    contentDescription = "Banner Pokémon",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(150.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // 🔹 PRODUCTOS
+                            var productos by remember {
+                                mutableStateOf(
+                                    listOf(
+                                        Producto("Figura Brook", "1200 €", R.drawable.brook),
+                                        Producto("Funko Pop Luffy", "890 €", R.drawable.zoro),
+                                        Producto("Camiseta Zelda", "700 €", R.drawable.camiseta2),
+                                        Producto("Poster Naruto", "300 €", R.drawable.pops)
+                                    )
+                                )
+                            }
+
+                            Text(
+                                "Nueva Colección",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                            )
+
+                            ProductosGrid(
+                                productos = productos,
+                                onGuardarClick = { productoClick ->
+                                    productos = productos.map {
+                                        if (it.nombre == productoClick.nombre) it.copy(guardado = !it.guardado) else it
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+
+
+                }
+
+                // ⚫️ Barra inferior (sin tocar)
+                Column(
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(20.dp)
+                            .background(Color.Black)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .background(Color.Black)
+                    ) {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+
+                        val items = listOf(
+                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_rojo else R.drawable.logo_gris, "pantallaHome"),
+                            Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa_a else R.drawable.lupa, "buscador"),
+                            Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
+                            Triple("GUARDADOS", R.drawable.guardado, "guardados"),
+                            Triple("AJUSTES", R.drawable.ajustes, "ajustes")
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            items.forEach { (label, icon, route) ->
+                                Button(
+                                    onClick = {
+                                        if (route != currentRoute) {
+                                            navController.navigate(route) {
+                                                popUpTo("pantallaHome") { inclusive = false }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                    elevation = ButtonDefaults.buttonElevation(0.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Image(
+                                            painter = painterResource(id = icon),
+                                            contentDescription = label,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = label,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (currentRoute == route) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (currentRoute == route) Color.White else Color.Gray,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+
+
+
+
+@Composable
+fun MenuLateral(navController: NavController, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Box(
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.BottomEnd // Ubicación del icono
+        ) {
+            // Imagen de perfil clickeable
+            Image(
+                painter = painterResource(id = R.drawable.grefg),
+                contentDescription = "Profile",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        navController.navigate("editarfoto")
+                        onClose() // ✅ Cierra el menú después de navegar
+                    }
+            )
+
+            // Icono superpuesto
+            Image(
+                painter = painterResource(id = R.drawable.editar_usuario), // Reemplaza con el recurso del icono
+                contentDescription = "Icon Overlay",
+                modifier = Modifier
+                    .size(30.dp) // Tamaño del icono
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.7f)) // Fondo negro semitransparente
+                    .padding(4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // Nombre del usuario
+        Text(
+            text = "David Muñoz",
+            fontSize = 24.sp,
+            color = Color.White,
+        )
+
+
+        Spacer(modifier = Modifier.height(70.dp))
+
+        Button(
+            onClick = { navController.navigate("perfil") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.usuario),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Perfil",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = { navController.navigate("puntosOfertas") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.logo_blanco),
+                    contentDescription = "Puntos",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Puntos",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = { navController.navigate("premium") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.premium),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Premium",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = { navController.navigate("notificaciones") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)), // Color gris oscuro
+            shape = RoundedCornerShape(8.dp), // Esquinas redondeadas
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp) // Un poco más alto para mejor apariencia
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp)) // Agrega espacio a la izquierda
+                Image(
+                    painter = painterResource(id = R.drawable.campana),
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(24.dp) // Icono un poco más grande
+                )
+                Spacer(modifier = Modifier.width(35.dp)) // Espacio entre el icono y el texto
+                Text(
+                    text = "Notificaciones",
+                    color = Color.White,
+                    fontSize = 18.sp // Texto más grande
+                )
+            }
+        }
+
+    }
+}
+
+data class Producto(
+    val nombre: String,
+    val precio: String,
+    val imagenRes: Int,
+    var guardado: Boolean = false
+)
+
+@Composable
+fun ProductoCard(
+    producto: Producto,
+    onGuardarClick: (Producto) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .border(1.dp, Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .width(160.dp)
+            .height(220.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box {
+                Image(
+                    painter = painterResource(id = producto.imagenRes),
+                    contentDescription = producto.nombre,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                )
+
+                // Guardado (esquina superior derecha)
+                Image(
+                    painter = painterResource(id = if (producto.guardado) R.drawable.guardados_negro else R.drawable.guardados_png),
+                    contentDescription = "Guardar",
+                    modifier = Modifier
+                        .size(35.dp) // 👈 AUMENTA este valor
+                        .align(Alignment.TopEnd)
+                        .padding(end = 8.dp)
+                        .clickable { onGuardarClick(producto) }
+                )
+
+                // Precio (esquina inferior derecha)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color(0xFFFF6B6B), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = producto.precio, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun ProductoGuardadoCard(producto: Producto) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .border(1.dp, Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .width(160.dp)
+            .height(220.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box {
+                Image(
+                    painter = painterResource(id = producto.imagenRes),
+                    contentDescription = producto.nombre,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                )
+
+                // 🔖 Ícono de guardado (fijo en negro arriba derecha)
+                Image(
+                    painter = painterResource(id = R.drawable.guardados_negro),
+                    contentDescription = "Guardado",
+                    modifier = Modifier
+                        .size(28.dp) // Puedes hacer esto más grande si lo quieres más visible
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                )
+
+                // 💸 Precio (abajo derecha)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color(0xFFFF6B6B), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = producto.precio, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+
+
+
+@Composable
+fun ProductosGrid(
+    productos: List<Producto>,
+    guardadosViewModel: GuardadosViewModel = viewModel(), // ViewModel compartido
+    onGuardarClick: (Producto) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(600.dp) // 🔥 Altura fija para evitar restricciones infinitas
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 100.dp)
+        ) {
+            items(productos.chunked(2)) { fila ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    fila.forEach { producto ->
+                        ProductoCard(
+                            producto = producto,
+                            onGuardarClick = {
+                                onGuardarClick(it)
+                                guardadosViewModel.toggleGuardado(it) // 🔥 Agrega o quita del ViewModel
+                            }
+                        )
+                    }
+                    if (fila.size == 1) {
+                        Spacer(modifier = Modifier.width(160.dp)) // Para alinear la tarjeta solitaria
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun CategoriaItem(titulo: String, imagenRes: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(
+            painter = painterResource(id = imagenRes),
+            contentDescription = titulo,
+            modifier = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = titulo,
+            textAlign = TextAlign.Center,
+            color = Color(0xFF8B8B8B),
+            fontSize = 14.sp
+        )
+    }
+}
+
