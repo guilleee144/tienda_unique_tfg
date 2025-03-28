@@ -1,0 +1,213 @@
+package com.example.uniqueartifacts.views
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.uniqueartifacts.R
+
+// 🔹 Modelo de Notificación
+data class Notificacion(
+    val icono: Int,
+    val titulo: String,
+    val descripcion: String
+)
+
+@Composable
+fun Notificaciones(navController: NavController) {
+    // 🔹 Lista de Notificaciones (Mutable para poder eliminarlas dinámicamente)
+    val notificaciones = remember {
+        mutableStateListOf(
+            Notificacion(R.drawable.descuento, "NUEVO DESCUENTO DISPONIBLE", "Entre en ofertas para descubrir los descuentos de la temporada."),
+            Notificacion(R.drawable.caja_icono, "PAQUETE ENTREGADO CON ÉXITO", "Su paquete ha llegado con éxito a la dirección C/Maria Sarmientos 31, ha sido entregado a las 8:31 am."),
+            Notificacion(R.drawable.descuento, "NUEVO DESCUENTO DISPONIBLE", "Entre en ofertas para descubrir los descuentos de la temporada."),
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 🔹 Encabezado
+            EncabezadoNotificaciones(navController, notificaciones.size)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 🔹 Lista de Notificaciones
+            if (notificaciones.isNotEmpty()) {
+                Column {
+                    notificaciones.forEach { notificacion ->
+                        NotificacionItem(notificacion) {
+                            notificaciones.remove(notificacion) // 🔥 Eliminar notificación al hacer swipe
+                        }
+                        Spacer(modifier = Modifier.height(12.dp)) // Espaciado entre notificaciones
+                    }
+                }
+            } else {
+                // 🔹 Mensaje cuando no hay notificaciones
+                Text(
+                    text = "No hay más notificaciones",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f)) // 🔹 Empuja el logo al final de la pantalla
+
+            // 🔹 Logo en la parte inferior
+            Image(
+                painter = painterResource(id = R.drawable.logo_gris_grande),
+                contentDescription = "Logo_gris",
+                modifier = Modifier.size(100.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun EncabezadoNotificaciones(navController: NavController, contador: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.atras),
+                    contentDescription = "Volver",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(80.dp))
+
+            Text(
+                text = "Notificaciones",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 🔔 Icono de campana con contador, ahora está debajo del título
+        Box(
+            modifier = Modifier.size(30.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.campana),
+                contentDescription = "Notificaciones",
+                modifier = Modifier.size(25.dp)
+            )
+
+            if (contador > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .background(Color.Red, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = contador.toString(),
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// 🔹 Tarjeta de Notificación con Swipe para Eliminar
+@Composable
+fun NotificacionItem(notificacion: Notificacion, onEliminar: () -> Unit) {
+    var isDragged by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isDragged) Color(0xFFDDDDDD) else Color(0xFFBBBBBB)) // 🔥 Cambia color al arrastrar
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { _, dragAmount ->
+                    isDragged = dragAmount < -50f // 🔥 Detecta swipe a la izquierda
+                }
+            }
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 🔹 Icono de la notificación
+            Image(
+                painter = painterResource(id = notificacion.icono),
+                contentDescription = "Icono Notificación",
+                modifier = Modifier.size(40.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // 🔹 Contenido de la notificación
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = notificacion.titulo,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = notificacion.descripcion,
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
+            }
+
+            // 🔥 Botón de eliminar cuando está arrastrado
+            if (isDragged) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { onEliminar() }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.papelera_negra),
+                            contentDescription = "Eliminar",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(text = "Eliminar", fontSize = 14.sp, color = Color.Black)
+                }
+            }
+        }
+    }
+}
