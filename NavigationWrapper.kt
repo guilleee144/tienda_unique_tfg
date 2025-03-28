@@ -5,7 +5,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import com.example.uniqueartifacts.views.Ajustes
 import com.example.uniqueartifacts.views.Buscador
+import com.example.uniqueartifacts.views.Carrito
+import com.example.uniqueartifacts.views.DetalleProducto
 import com.example.uniqueartifacts.views.EditarFotoScreen
 import com.example.uniqueartifacts.views.Guardados
 import com.example.uniqueartifacts.views.Home
@@ -30,5 +33,8 @@ fun NavigationWrapper(navHostController: NavHostController, guardadosViewModel: 
         composable(route = "notificaciones") { Notificaciones(navHostController) }
         composable(route = "buscador") { Buscador(navHostController) }
         composable(route = "guardados") { Guardados(navHostController, guardadosViewModel) }
+        composable(route = "ajustes") {Ajustes(navHostController) }
+        composable(route = "detallesProducto") { DetalleProducto(navHostController, guardadosViewModel) }
+        composable(route = "carrito") { Carrito(navHostController) }
     }
 }
