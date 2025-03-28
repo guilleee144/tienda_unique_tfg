@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uniqueartifacts.R
+import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,9 @@ import kotlinx.coroutines.launch
 fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val carritoViewModel: CarritoViewModel = viewModel()
+    val totalProductos = carritoViewModel.productosEnCarrito.value.size
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -102,11 +106,39 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
                                     modifier = Modifier.size(50.dp)
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
-                                Image(
-                                    painter = painterResource(id = R.drawable.cesta),
-                                    contentDescription = "Carrito",
-                                    modifier = Modifier.size(30.dp)
-                                )
+                                Box(
+                                    contentAlignment = Alignment.TopEnd
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.cesta),
+                                        contentDescription = "Carrito",
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clickable {
+                                                navController.navigate("carrito")
+                                            }
+                                    )
+
+                                    // 🔴 Badge si hay productos
+                                    if (totalProductos > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = 8.dp, y = (-4).dp)
+                                                .size(16.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Red),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = totalProductos.toString(),
+                                                color = Color.White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -220,12 +252,17 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
 
                             ProductosGrid(
                                 productos = productos,
+                                navController = navController,
+                                guardadosViewModel = guardadosViewModel,
+                                carritoViewModel = carritoViewModel,
                                 onGuardarClick = { productoClick ->
                                     productos = productos.map {
                                         if (it.nombre == productoClick.nombre) it.copy(guardado = !it.guardado) else it
                                     }
                                 }
                             )
+
+
                         }
                     }
 
@@ -502,10 +539,13 @@ data class Producto(
     var guardado: Boolean = false
 )
 
+// ProductoCard.kt
 @Composable
 fun ProductoCard(
     producto: Producto,
-    onGuardarClick: (Producto) -> Unit
+    navController: NavController,
+    onGuardarClick: (Producto) -> Unit,
+    onAñadirClick: (Producto) -> Unit // 👈 Añade este parámetro
 ) {
     Box(
         modifier = Modifier
@@ -514,7 +554,7 @@ fun ProductoCard(
             .background(Color.White)
             .border(1.dp, Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
             .width(160.dp)
-            .height(220.dp)
+            .height(250.dp) // un poco más alto si quieres que quepa el botón
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
@@ -525,20 +565,23 @@ fun ProductoCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
+                        .clickable {
+                            navController.navigate("detallesProducto")
+                        }
                 )
 
-                // Guardado (esquina superior derecha)
+                // Guardar
                 Image(
                     painter = painterResource(id = if (producto.guardado) R.drawable.guardados_negro else R.drawable.guardados_png),
                     contentDescription = "Guardar",
                     modifier = Modifier
-                        .size(35.dp) // 👈 AUMENTA este valor
+                        .size(35.dp)
                         .align(Alignment.TopEnd)
                         .padding(end = 8.dp)
                         .clickable { onGuardarClick(producto) }
                 )
 
-                // Precio (esquina inferior derecha)
+                // Precio
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -549,9 +592,24 @@ fun ProductoCard(
                     Text(text = producto.precio, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
+
+            // 🔘 Botón añadir al carrito
+            Button(
+                onClick = { onAñadirClick(producto) },
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth(0.8f)
+                    .height(32.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+            ) {
+                Text(text = "Añadir", fontSize = 12.sp, color = Color.White)
+            }
         }
     }
 }
+
+
 
 
 @Composable
@@ -607,13 +665,15 @@ fun ProductoGuardadoCard(producto: Producto) {
 @Composable
 fun ProductosGrid(
     productos: List<Producto>,
-    guardadosViewModel: GuardadosViewModel = viewModel(), // ViewModel compartido
+    navController: NavController,
+    carritoViewModel: CarritoViewModel = viewModel(),
+    guardadosViewModel: GuardadosViewModel = viewModel(),
     onGuardarClick: (Producto) -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(600.dp) // 🔥 Altura fija para evitar restricciones infinitas
+            .height(600.dp) // Puedes ajustar esto si necesitas scroll más largo
     ) {
         LazyColumn(
             modifier = Modifier
@@ -630,14 +690,19 @@ fun ProductosGrid(
                     fila.forEach { producto ->
                         ProductoCard(
                             producto = producto,
+                            navController = navController,
                             onGuardarClick = {
                                 onGuardarClick(it)
-                                guardadosViewModel.toggleGuardado(it) // 🔥 Agrega o quita del ViewModel
+                                guardadosViewModel.toggleGuardado(it)
+                            },
+                            onAñadirClick = {
+                                carritoViewModel.agregarAlCarrito(it)
                             }
                         )
                     }
+
                     if (fila.size == 1) {
-                        Spacer(modifier = Modifier.width(160.dp)) // Para alinear la tarjeta solitaria
+                        Spacer(modifier = Modifier.width(160.dp))
                     }
                 }
             }
@@ -664,6 +729,46 @@ fun CategoriaItem(titulo: String, imagenRes: Int) {
             color = Color(0xFF8B8B8B),
             fontSize = 14.sp
         )
+    }
+}
+
+@Composable
+fun CarritoResumen(carritoViewModel: CarritoViewModel, navController: NavController) {
+    val cantidad = carritoViewModel.obtenerCantidadTotal()
+    val total = carritoViewModel.obtenerPrecioTotal()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFF6B6B))
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = R.drawable.cesta),
+                    contentDescription = "Carrito",
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text("🛒 $cantidad unidades", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Precio Estimado $total €", color = Color.White, fontSize = 12.sp)
+                }
+            }
+
+            Button(
+                onClick = { navController.navigate("carrito") },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text("Ver Carrito", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
