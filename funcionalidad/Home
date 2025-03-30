@@ -17,7 +17,6 @@ import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.uniqueartifacts.R
+import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import io.github.jan.supabase.createSupabaseClient
@@ -43,15 +43,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Inicializa el cliente Supabase
+// Inicialización del cliente Supabase
 val supabase = createSupabaseClient(
     supabaseUrl = "https://ddatdozwiwxabnlomnad.supabase.co",
-    supabaseKey = "tu_supabase_key_aquí"
+    supabaseKey = "TU_SUPABASE_KEY_AQUI" // Reemplaza por tu key
 ) {
     install(Postgrest)
 }
 
-// Mapeo de categoría a nombre de tabla en Supabase
+// Mapeo de categorías a nombres de tabla en Supabase
 val categoryToTable = mapOf(
     "Figuras" to "producto_figuras",
     "Funko Pops" to "producto_funkos",
@@ -66,36 +66,32 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     val scope = rememberCoroutineScope()
     val totalProductos = carritoViewModel.productosEnCarrito.value.size
 
-    // Estado para la categoría seleccionada. Si es null, se muestran productos aleatorios.
+    // Estado para la categoría seleccionada; nulo = sin filtro (aleatorio de todas)
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    // Lista de productos a mostrar
-    var productos by remember { mutableStateOf<List<com.example.uniqueartifacts.model.Producto>>(emptyList()) }
+    // Estado para almacenar los productos consultados
+    var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
 
     // Efecto que consulta la BD cada vez que cambia la categoría seleccionada
     LaunchedEffect(selectedCategory) {
         productos = withContext(Dispatchers.IO) {
             if (selectedCategory == null) {
-                // Ejemplo: si no se ha seleccionado una categoría, se puede consultar todas y luego barajar
-                val cartas = supabase.from("producto_cartas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                val figuras = supabase.from("producto_figuras").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                val funkos = supabase.from("producto_funkos").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                val camisetas = supabase.from("producto_camisetas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                val tazas = supabase.from("producto_tazas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                // Consulta de productos aleatorios de todas las tablas
+                val cartas = supabase.from("producto_cartas").select().decodeList<Producto>()
+                val figuras = supabase.from("producto_figuras").select().decodeList<Producto>()
+                val funkos = supabase.from("producto_funkos").select().decodeList<Producto>()
+                val camisetas = supabase.from("producto_camisetas").select().decodeList<Producto>()
+                val tazas = supabase.from("producto_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
             } else {
-                // Si se selecciona una categoría, usamos el mapeo para determinar la tabla
+                // Consulta específica a la tabla mapeada
                 val tableName = categoryToTable[selectedCategory]
                 tableName?.let {
-                    // Consulta la tabla específica
-                    val data = supabase.from(it).select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                    // Agrupa por subcategoría y aplana la lista (puedes modificar para mostrar encabezados de grupo)
-                    data
+                    supabase.from(it).select().decodeList<Producto>()
                 } ?: emptyList()
             }
         }
     }
 
-    // El resto del diseño permanece similar
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = false,
@@ -121,7 +117,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                         .fillMaxSize()
                         .padding(bottom = 100.dp)
                 ) {
-                    // Navbar (igual que antes)
+                    // Navbar con fondo negro
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -219,11 +215,8 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                             }
                         }
                     }
-
                     Spacer(modifier = Modifier.height(15.dp))
-
                     val scrollState = rememberScrollState()
-
                     Box(modifier = Modifier.weight(1f)) {
                         Column(
                             modifier = Modifier
@@ -232,7 +225,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                 .background(Color.White)
                                 .padding(bottom = 100.dp)
                         ) {
-                            // Categorías: cada elemento es clicable y actualiza selectedCategory
+                            // Categorías: elementos clicables que actualizan la categoría seleccionada
                             LazyRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -250,13 +243,11 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                             "Tazas" -> R.drawable.taza
                                             else -> R.drawable.logo_rojo
                                         },
-                                        onClick = { selectedCategory = category } // Actualiza la categoría seleccionada
+                                        onClick = { selectedCategory = category }
                                     )
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(25.dp))
-
                             // Banner de nueva colección
                             Column(
                                 modifier = Modifier
@@ -279,21 +270,16 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         .height(150.dp)
                                 )
                             }
-
                             Spacer(modifier = Modifier.height(20.dp))
-
-                            // PRODUCTOS: se muestran los productos consultados en función de la categoría seleccionada
-                            // Si no hay categoría seleccionada se muestran 10 aleatorios de todas las tablas.
+                            // Título de productos según categoría (si no hay categoría, "Nueva Colección")
                             Text(
-                                text = if (selectedCategory == null) "Nueva Colección" else selectedCategory!!,
+                                text = selectedCategory ?: "Nueva Colección",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                             )
-
-                            // Aquí agrupamos los productos por subcategoría (opcional)
+                            // Agrupar productos por subcategoría (si es que tienen)
                             val grouped = productos.groupBy { it.subcategoria }
-                            // Mostramos cada grupo:
                             LazyColumn {
                                 grouped.forEach { (subcategoria, list) ->
                                     item {
@@ -305,7 +291,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         )
                                     }
                                     items(list, key = { it.id ?: 0 }) { producto ->
-                                        // Usamos un ListItem que muestra el nombre, el precio y la imagen
+                                        // Cada producto se muestra con imagen, nombre y precio
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -333,8 +319,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                         }
                     }
                 }
-
-                // Barra inferior (igual que antes)
+                // Barra inferior fija
                 Column(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
@@ -430,5 +415,164 @@ fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
             color = Color(0xFF8B8B8B),
             fontSize = 14.sp
         )
+    }
+}
+
+@Composable
+fun MenuLateral(navController: NavController, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(40.dp))
+        Box(
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.grefg),
+                contentDescription = "Profile",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        navController.navigate("editarfoto")
+                        onClose()
+                    }
+            )
+            Image(
+                painter = painterResource(id = R.drawable.editar_usuario),
+                contentDescription = "Icon Overlay",
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .padding(4.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(15.dp))
+        Text(
+            text = "David Muñoz",
+            fontSize = 24.sp,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(70.dp))
+        Button(
+            onClick = { navController.navigate("perfil") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.usuario),
+                    contentDescription = "Profile",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(35.dp))
+                Text(
+                    text = "Perfil",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = { navController.navigate("puntosOfertas") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.logo_blanco),
+                    contentDescription = "Puntos",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(35.dp))
+                Text(
+                    text = "Puntos",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = { navController.navigate("premium") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.premium),
+                    contentDescription = "Premium",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(35.dp))
+                Text(
+                    text = "Premium",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = { navController.navigate("notificaciones") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.campana),
+                    contentDescription = "Notificaciones",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(35.dp))
+                Text(
+                    text = "Notificaciones",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+            }
+        }
     }
 }
