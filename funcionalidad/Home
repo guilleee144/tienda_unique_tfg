@@ -2,7 +2,6 @@ package com.example.uniqueartifacts.views
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.uniqueartifacts.R
@@ -45,34 +43,69 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Inicializa el cliente Supabase (usa el mismo cliente para todas las consultas)
+// Inicializa el cliente Supabase
 val supabase = createSupabaseClient(
     supabaseUrl = "https://ddatdozwiwxabnlomnad.supabase.co",
-    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkYXRkb3p3aXd4YWJubG9tbmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzMjYwMTksImV4cCI6MjA1ODkwMjAxOX0.vrDm9mxlg69scKMuQ3b_XASYMRVmvGYjftqmRsoinUY"
+    supabaseKey = "tu_supabase_key_aquí"
 ) {
     install(Postgrest)
 }
 
+// Mapeo de categoría a nombre de tabla en Supabase
+val categoryToTable = mapOf(
+    "Figuras" to "producto_figuras",
+    "Funko Pops" to "producto_funkos",
+    "Cartas" to "producto_cartas",
+    "Camisetas" to "producto_camisetas",
+    "Tazas" to "producto_tazas"
+)
+
 @Composable
-fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
-    // Estado para controlar el menú lateral y el carrito (tal como lo tenías)
+fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val carritoViewModel: CarritoViewModel = viewModel()
     val totalProductos = carritoViewModel.productosEnCarrito.value.size
 
+    // Estado para la categoría seleccionada. Si es null, se muestran productos aleatorios.
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    // Lista de productos a mostrar
+    var productos by remember { mutableStateOf<List<com.example.uniqueartifacts.model.Producto>>(emptyList()) }
+
+    // Efecto que consulta la BD cada vez que cambia la categoría seleccionada
+    LaunchedEffect(selectedCategory) {
+        productos = withContext(Dispatchers.IO) {
+            if (selectedCategory == null) {
+                // Ejemplo: si no se ha seleccionado una categoría, se puede consultar todas y luego barajar
+                val cartas = supabase.from("producto_cartas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                val figuras = supabase.from("producto_figuras").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                val funkos = supabase.from("producto_funkos").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                val camisetas = supabase.from("producto_camisetas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                val tazas = supabase.from("producto_tazas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
+            } else {
+                // Si se selecciona una categoría, usamos el mapeo para determinar la tabla
+                val tableName = categoryToTable[selectedCategory]
+                tableName?.let {
+                    // Consulta la tabla específica
+                    val data = supabase.from(it).select().decodeList<com.example.uniqueartifacts.model.Producto>()
+                    // Agrupa por subcategoría y aplana la lista (puedes modificar para mostrar encabezados de grupo)
+                    data
+                } ?: emptyList()
+            }
+        }
+    }
+
+    // El resto del diseño permanece similar
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = false, // Evita que el usuario abra el menú deslizando
+        gesturesEnabled = false,
         drawerContent = {
             Row {
                 DismissibleDrawerSheet(
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) {
-                        scope.launch { drawerState.close() }
-                    }
+                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
@@ -88,7 +121,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
                         .fillMaxSize()
                         .padding(bottom = 100.dp)
                 ) {
-                    // ▪️ Navbar con fondo negro
+                    // Navbar (igual que antes)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -128,9 +161,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
                                         contentDescription = "Carrito",
                                         modifier = Modifier
                                             .size(30.dp)
-                                            .clickable {
-                                                navController.navigate("carrito")
-                                            }
+                                            .clickable { navController.navigate("carrito") }
                                     )
                                     if (totalProductos > 0) {
                                         Box(
@@ -192,6 +223,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
                     Spacer(modifier = Modifier.height(15.dp))
 
                     val scrollState = rememberScrollState()
+
                     Box(modifier = Modifier.weight(1f)) {
                         Column(
                             modifier = Modifier
@@ -200,22 +232,32 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
                                 .background(Color.White)
                                 .padding(bottom = 100.dp)
                         ) {
-                            // ▪️ CATEGORÍAS
+                            // Categorías: cada elemento es clicable y actualiza selectedCategory
                             LazyRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 contentPadding = PaddingValues(horizontal = 16.dp)
                             ) {
-                                item { CategoriaItem("Figuras", R.drawable.zoro) }
-                                item { CategoriaItem("Funko Pops", R.drawable.pops) }
-                                item { CategoriaItem("Cartas", R.drawable.cartas) }
-                                item { CategoriaItem("Camisetas", R.drawable.camiseta) }
-                                item { CategoriaItem("Tazas", R.drawable.taza) }
+                                val categories = listOf("Figuras", "Funko Pops", "Cartas", "Camisetas", "Tazas")
+                                items(categories) { category ->
+                                    CategoriaItem(
+                                        titulo = category,
+                                        imagenRes = when (category) {
+                                            "Figuras" -> R.drawable.zoro
+                                            "Funko Pops" -> R.drawable.pops
+                                            "Cartas" -> R.drawable.cartas
+                                            "Camisetas" -> R.drawable.camiseta
+                                            "Tazas" -> R.drawable.taza
+                                            else -> R.drawable.logo_rojo
+                                        },
+                                        onClick = { selectedCategory = category } // Actualiza la categoría seleccionada
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(25.dp))
 
-                            // ▪️ NUEVA COLECCIÓN
+                            // Banner de nueva colección
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -240,43 +282,59 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // ▪️ PRODUCTOS: se reemplaza la lista estática por la consulta a Supabase
-                            var productos by remember { mutableStateOf<List<com.example.uniqueartifacts.model.Producto>>(emptyList()) }
-
-                            LaunchedEffect(Unit) {
-                                productos = withContext(Dispatchers.IO) {
-                                    // Consulta las 5 tablas y combínalas
-                                    val cartas = supabase.from("producto_cartas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                                    val figuras = supabase.from("producto_figuras").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                                    val funkos = supabase.from("producto_funkos").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                                    val camisetas = supabase.from("producto_camisetas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                                    val tazas = supabase.from("producto_tazas").select().decodeList<com.example.uniqueartifacts.model.Producto>()
-                                    // Une las listas, barájalas y toma 10 aleatorios
-                                    (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
-                                }
-                            }
-
+                            // PRODUCTOS: se muestran los productos consultados en función de la categoría seleccionada
+                            // Si no hay categoría seleccionada se muestran 10 aleatorios de todas las tablas.
                             Text(
-                                "Nueva Colección",
+                                text = if (selectedCategory == null) "Nueva Colección" else selectedCategory!!,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                             )
 
-                            ProductosGrid(
-                                productos = productos,
-                                navController = navController,
-                                guardadosViewModel = guardadosViewModel,
-                                carritoViewModel = viewModel(),
-                                onGuardarClick = { productoClick ->
-                                    // Aquí puedes definir la acción al pulsar "guardar"
+                            // Aquí agrupamos los productos por subcategoría (opcional)
+                            val grouped = productos.groupBy { it.subcategoria }
+                            // Mostramos cada grupo:
+                            LazyColumn {
+                                grouped.forEach { (subcategoria, list) ->
+                                    item {
+                                        Text(
+                                            text = subcategoria,
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                        )
+                                    }
+                                    items(list, key = { it.id ?: 0 }) { producto ->
+                                        // Usamos un ListItem que muestra el nombre, el precio y la imagen
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                                .clickable { /* Acción al pulsar el producto */ },
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            AsyncImage(
+                                                model = producto.imagen,
+                                                contentDescription = producto.producto,
+                                                modifier = Modifier
+                                                    .size(64.dp)
+                                                    .clip(RoundedCornerShape(8.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(text = producto.producto, fontWeight = FontWeight.Bold)
+                                                Text(text = "€ ${producto.precio}", color = Color.Gray)
+                                            }
+                                        }
+                                    }
                                 }
-                            )
+                            }
                         }
                     }
                 }
 
-                // ▪️ Barra inferior (sin tocar)
+                // Barra inferior (igual que antes)
                 Column(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
@@ -349,4 +407,28 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel) {
             }
         }
     )
+}
+
+@Composable
+fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Image(
+            painter = painterResource(id = imagenRes),
+            contentDescription = titulo,
+            modifier = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = titulo,
+            textAlign = TextAlign.Center,
+            color = Color(0xFF8B8B8B),
+            fontSize = 14.sp
+        )
+    }
 }
