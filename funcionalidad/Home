@@ -42,29 +42,27 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 
-// Inicialización del cliente Supabase
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://ddatdozwiwxabnlomnad.supabase.co",
-    supabaseKey = "TU_SUPABASE_KEY_AQUI" // Reemplaza por tu key
-) {
-    install(Postgrest)
-}
+
 
 // Mapeo de categorías a nombres de tabla en Supabase
 val categoryToTable = mapOf(
-    "Figuras" to "producto_figuras",
-    "Funko Pops" to "producto_funkos",
-    "Cartas" to "producto_cartas",
-    "Camisetas" to "producto_camisetas",
-    "Tazas" to "producto_tazas"
+    "Figuras" to "productos_figuras",
+    "Funko Pops" to "productos_funkos",
+    "Cartas" to "productos_cartas",
+    "Camisetas" to "productos_camisetas",
+    "Tazas" to "productos_tazas"
 )
 
 @Composable
 fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val totalProductos = carritoViewModel.productosEnCarrito.value.size
+    val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
+    val totalCount = totalProductos.size
+
+
 
     // Estado para la categoría seleccionada; nulo = sin filtro (aleatorio de todas)
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -76,17 +74,17 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
         productos = withContext(Dispatchers.IO) {
             if (selectedCategory == null) {
                 // Consulta de productos aleatorios de todas las tablas
-                val cartas = supabase.from("producto_cartas").select().decodeList<Producto>()
-                val figuras = supabase.from("producto_figuras").select().decodeList<Producto>()
-                val funkos = supabase.from("producto_funkos").select().decodeList<Producto>()
-                val camisetas = supabase.from("producto_camisetas").select().decodeList<Producto>()
-                val tazas = supabase.from("producto_tazas").select().decodeList<Producto>()
+                val cartas = SupabaseClientProvider.client.from("productos_cartas").select().decodeList<Producto>()
+                val figuras = SupabaseClientProvider.client.from("productos_figuras").select().decodeList<Producto>()
+                val funkos = SupabaseClientProvider.client.from("productos_funkos").select().decodeList<Producto>()
+                val camisetas = SupabaseClientProvider.client.from("productos_camisetas").select().decodeList<Producto>()
+                val tazas = SupabaseClientProvider.client.from("productos_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
             } else {
                 // Consulta específica a la tabla mapeada
                 val tableName = categoryToTable[selectedCategory]
                 tableName?.let {
-                    supabase.from(it).select().decodeList<Producto>()
+                    SupabaseClientProvider.client.from(it).select().decodeList<Producto>()
                 } ?: emptyList()
             }
         }
@@ -159,7 +157,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                             .size(30.dp)
                                             .clickable { navController.navigate("carrito") }
                                     )
-                                    if (totalProductos > 0) {
+                                    if (totalCount > 0) {
                                         Box(
                                             modifier = Modifier
                                                 .offset(x = 8.dp, y = (-4).dp)
@@ -216,12 +214,11 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                         }
                     }
                     Spacer(modifier = Modifier.height(15.dp))
-                    val scrollState = rememberScrollState()
+                    //val scrollState = rememberScrollState()
                     Box(modifier = Modifier.weight(1f)) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .verticalScroll(scrollState)
                                 .background(Color.White)
                                 .padding(bottom = 100.dp)
                         ) {
@@ -271,9 +268,9 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                 )
                             }
                             Spacer(modifier = Modifier.height(20.dp))
-                            // Título de productos según categoría (si no hay categoría, "Nueva Colección")
+                            // Título de productos según categoría (si no hay categoría, "Destacados")
                             Text(
-                                text = selectedCategory ?: "Nueva Colección",
+                                text = selectedCategory ?: "Destacados",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -337,8 +334,8 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                     ) {
                         val currentRoute = navController.currentBackStackEntry?.destination?.route
                         val items = listOf(
-                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_rojo else R.drawable.logo_gris, "pantallaHome"),
-                            Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa_a else R.drawable.lupa, "buscador"),
+                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_gris else R.drawable.logo_rojo, "pantallaHome"),
+                            Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa else R.drawable.lupa_a, "buscador"),
                             Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
                             Triple("GUARDADOS", R.drawable.guardado, "guardados"),
                             Triple("AJUSTES", R.drawable.ajustes, "ajustes")
