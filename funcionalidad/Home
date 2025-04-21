@@ -72,23 +72,26 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     // Efecto que consulta la BD cada vez que cambia la categoría seleccionada
     LaunchedEffect(selectedCategory) {
         productos = withContext(Dispatchers.IO) {
+            val supabase = SupabaseClientProvider.getClient()
+
             if (selectedCategory == null) {
                 // Consulta de productos aleatorios de todas las tablas
-                val cartas = SupabaseClientProvider.client.from("productos_cartas").select().decodeList<Producto>()
-                val figuras = SupabaseClientProvider.client.from("productos_figuras").select().decodeList<Producto>()
-                val funkos = SupabaseClientProvider.client.from("productos_funkos").select().decodeList<Producto>()
-                val camisetas = SupabaseClientProvider.client.from("productos_camisetas").select().decodeList<Producto>()
-                val tazas = SupabaseClientProvider.client.from("productos_tazas").select().decodeList<Producto>()
+                val cartas = supabase.from("productos_cartas").select().decodeList<Producto>()
+                val figuras = supabase.from("productos_figuras").select().decodeList<Producto>()
+                val funkos = supabase.from("productos_funkos").select().decodeList<Producto>()
+                val camisetas = supabase.from("productos_camisetas").select().decodeList<Producto>()
+                val tazas = supabase.from("productos_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
             } else {
                 // Consulta específica a la tabla mapeada
                 val tableName = categoryToTable[selectedCategory]
                 tableName?.let {
-                    SupabaseClientProvider.client.from(it).select().decodeList<Producto>()
+                    supabase.from(it).select().decodeList<Producto>()
                 } ?: emptyList()
             }
         }
     }
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
