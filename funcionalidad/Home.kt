@@ -32,8 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.model.Producto
+import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import io.github.jan.supabase.createSupabaseClient
@@ -43,7 +45,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
-
+import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 
 // Mapeo de categorías a nombres de tabla en Supabase
@@ -56,7 +59,7 @@ val categoryToTable = mapOf(
 )
 
 @Composable
-fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel) {
+fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel, detalleProductoViewModel: DetalleProductoViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
@@ -133,9 +136,38 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                var userData by remember { mutableStateOf<UserData?>(null) }
+                                val scope = rememberCoroutineScope()
+
+                                LaunchedEffect(Unit) {
+                                    scope.launch {
+                                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+                                        if (userId != null) {
+                                            val result = SupabaseClientProvider.getClient()
+                                                .from("usuarios")
+                                                .select {
+                                                    filter {
+                                                        eq("uid", userId)
+                                                    }
+                                                }
+                                                .decodeSingle<UserData>()
+                                            userData = result
+                                        }
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
+
+                                val fotoPerfil = userData?.fotoPerfil
+                                val imagenPerfil = if (fotoPerfil.isNullOrEmpty()) R.drawable.camara else null
+                                val painter = if (imagenPerfil != null) {
+                                    painterResource(id = imagenPerfil)
+                                } else {
+                                    rememberAsyncImagePainter(fotoPerfil)
+                                }
+
                                 Image(
-                                    painter = painterResource(id = R.drawable.grefg),
+                                    painter = painter,
                                     contentDescription = "Profile",
                                     modifier = Modifier
                                         .size(45.dp)
@@ -143,6 +175,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         .clickable { scope.launch { drawerState.open() } },
                                     contentScale = ContentScale.Crop
                                 )
+
                                 Spacer(modifier = Modifier.weight(0.9f))
                                 Image(
                                     painter = painterResource(id = R.drawable.logo_rojo),
@@ -296,7 +329,10 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                                                .clickable { /* Acción al pulsar el producto */ },
+                                                .clickable {
+                                                    detalleProductoViewModel.productoSeleccionado.value = producto
+                                                    navController.navigate("detallesProducto")
+                                                },
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             AsyncImage(
@@ -420,6 +456,26 @@ fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
 
 @Composable
 fun MenuLateral(navController: NavController, onClose: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var userData by remember { mutableStateOf<UserData?>(null) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid
+            if (userId != null) {
+                val result = SupabaseClientProvider.getClient()
+                    .from("usuarios")
+                    .select {
+                        filter {
+                            eq("uid", userId)
+                        }
+                    }
+                    .decodeSingle<UserData>()
+                userData = result
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxHeight()
@@ -431,8 +487,16 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
             modifier = Modifier.size(120.dp),
             contentAlignment = Alignment.BottomEnd
         ) {
+            val fotoPerfil = userData?.fotoPerfil
+            val imagenPerfil = if (fotoPerfil.isNullOrEmpty()) R.drawable.camara else null
+            val painter = if (imagenPerfil != null) {
+                painterResource(id = imagenPerfil)
+            } else {
+                rememberAsyncImagePainter(fotoPerfil)
+            }
+
             Image(
-                painter = painterResource(id = R.drawable.grefg),
+                painter = painter,
                 contentDescription = "Profile",
                 modifier = Modifier
                     .size(120.dp)
@@ -454,11 +518,12 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(15.dp))
         Text(
-            text = "David Muñoz",
+            text = "${userData?.nombre ?: ""} ${userData?.apellidos ?: ""}",
             fontSize = 24.sp,
             color = Color.White
         )
         Spacer(modifier = Modifier.height(70.dp))
+
         Button(
             onClick = { navController.navigate("perfil") },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
@@ -487,6 +552,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("puntosOfertas") },
@@ -516,6 +582,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("premium") },
@@ -545,6 +612,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("notificaciones") },
@@ -576,3 +644,4 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
         }
     }
 }
+
