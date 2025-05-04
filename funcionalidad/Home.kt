@@ -494,27 +494,32 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
             } else {
                 rememberAsyncImagePainter(fotoPerfil)
             }
+            Box(
+                modifier = Modifier.size(120.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                Image(
+                    painter = painter,
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.editar_usuario),
+                    contentDescription = "Icon Overlay",
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(4.dp)
+                        .clickable {
+                            navController.navigate("editarfoto")
+                            onClose()
+                        }
+                )
+            }
 
-            Image(
-                painter = painter,
-                contentDescription = "Profile",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        navController.navigate("editarfoto")
-                        onClose()
-                    }
-            )
-            Image(
-                painter = painterResource(id = R.drawable.editar_usuario),
-                contentDescription = "Icon Overlay",
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .padding(4.dp)
-            )
         }
         Spacer(modifier = Modifier.height(15.dp))
         Text(
