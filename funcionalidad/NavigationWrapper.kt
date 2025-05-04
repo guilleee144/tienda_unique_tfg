@@ -9,6 +9,7 @@ import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import com.example.uniqueartifacts.views.DetalleProducto
+import com.example.uniqueartifacts.views.EditarFotoScreen
 import com.example.uniqueartifacts.views.Home
 import com.example.uniqueartifacts.views.LoginScreen
 import com.example.uniqueartifacts.views.PantallaCarga
@@ -29,6 +30,8 @@ fun NavigationWrapper(
         composable("loginScreen") { LoginScreen(navHostController) }
         composable("registroScreen") { RegistroScreen(navHostController) }
         composable("perfil") { PerfilScreen(navHostController) }
+        composable(route = "editarfoto") { EditarFotoScreen(navHostController) }
+
         composable("pantallaHome") {
             Home(
                 navController = navHostController,
