@@ -65,20 +65,18 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     val totalCount = totalProductos.size
 
-
-
-    // Estado para la categoría seleccionada; nulo = sin filtro (aleatorio de todas)
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    // Estado para almacenar los productos consultados
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    var searchText by remember { mutableStateOf("") }
+    var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    val categorias = categoryToTable.values.toList()
 
-    // Efecto que consulta la BD cada vez que cambia la categoría seleccionada
+    // Consulta de productos al cambiar la categoría
     LaunchedEffect(selectedCategory) {
         productos = withContext(Dispatchers.IO) {
             val supabase = SupabaseClientProvider.getClient()
 
             if (selectedCategory == null) {
-                // Consulta de productos aleatorios de todas las tablas
                 val cartas = supabase.from("productos_cartas").select().decodeList<Producto>()
                 val figuras = supabase.from("productos_figuras").select().decodeList<Producto>()
                 val funkos = supabase.from("productos_funkos").select().decodeList<Producto>()
@@ -86,7 +84,6 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                 val tazas = supabase.from("productos_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
             } else {
-                // Consulta específica a la tabla mapeada
                 val tableName = categoryToTable[selectedCategory]
                 tableName?.let {
                     supabase.from(it).select().decodeList<Producto>()
@@ -95,6 +92,28 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
         }
     }
 
+    // Búsqueda en tiempo real
+    LaunchedEffect(searchText) {
+        if (searchText.isBlank()) {
+            resultadosBusqueda = emptyList()
+        } else {
+            scope.launch {
+                resultadosBusqueda = withContext(Dispatchers.IO) {
+                    val client = SupabaseClientProvider.getClient()
+                    val allProducts = categorias.flatMap { tabla ->
+                        try {
+                            client.from(tabla).select().decodeList<Producto>()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+                    allProducts.filter {
+                        it.producto.contains(searchText, ignoreCase = true)
+                    }
+                }
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -121,7 +140,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                         .fillMaxSize()
                         .padding(bottom = 100.dp)
                 ) {
-                    // Navbar con fondo negro
+                    // Navbar
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -137,7 +156,6 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 var userData by remember { mutableStateOf<UserData?>(null) }
-                                val scope = rememberCoroutineScope()
 
                                 LaunchedEffect(Unit) {
                                     scope.launch {
@@ -183,9 +201,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     modifier = Modifier.size(50.dp)
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
-                                Box(
-                                    contentAlignment = Alignment.TopEnd
-                                ) {
+                                Box(contentAlignment = Alignment.TopEnd) {
                                     Image(
                                         painter = painterResource(id = R.drawable.cesta),
                                         contentDescription = "Carrito",
@@ -213,8 +229,10 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                 }
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            var searchText by remember { mutableStateOf("") }
+
+                            // Buscador clásico integrado (no superpuesto)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -249,6 +267,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                             }
                         }
                     }
+
                     Spacer(modifier = Modifier.height(15.dp))
                     //val scrollState = rememberScrollState()
                     Box(modifier = Modifier.weight(1f)) {
@@ -373,7 +392,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                     ) {
                         val currentRoute = navController.currentBackStackEntry?.destination?.route
                         val items = listOf(
-                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_gris else R.drawable.logo_rojo, "pantallaHome"),
+                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_rojo else R.drawable.logo_gris, "pantallaHome"),
                             Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa else R.drawable.lupa_a, "buscador"),
                             Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
                             Triple("GUARDADOS", R.drawable.guardado, "guardados"),
