@@ -20,9 +20,15 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.model.Producto
+import com.example.uniqueartifacts.model.UserData
+import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import com.google.firebase.auth.FirebaseAuth
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun DetalleProducto(
@@ -36,6 +42,34 @@ fun DetalleProducto(
     val scope = rememberCoroutineScope()
     val imagenes = listOfNotNull(producto.imagen, producto.imagen2, producto.imagen3)
     var imagenSeleccionada by remember { mutableStateOf(imagenes.first()) }
+    var searchText by remember { mutableStateOf("") }
+    var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    val categorias = categoryToTable.values.toList()
+    val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
+    val totalCount = totalProductos.size
+
+    // Búsqueda en tiempo real
+    LaunchedEffect(searchText) {
+        if (searchText.isBlank()) {
+            resultadosBusqueda = emptyList()
+        } else {
+            scope.launch {
+                resultadosBusqueda = withContext(Dispatchers.IO) {
+                    val client = SupabaseClientProvider.getClient()
+                    val allProducts = categorias.flatMap { tabla ->
+                        try {
+                            client.from(tabla).select().decodeList<Producto>()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+                    allProducts.filter {
+                        it.producto.contains(searchText, ignoreCase = true)
+                    }
+                }
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -46,9 +80,7 @@ fun DetalleProducto(
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) {
-                        scope.launch { drawerState.close() }
-                    }
+                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
@@ -63,9 +95,8 @@ fun DetalleProducto(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = 100.dp)
-                        .verticalScroll(scrollState)
                 ) {
-                    // Encabezado con búsqueda y perfil
+                    // Navbar
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -80,9 +111,37 @@ fun DetalleProducto(
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                var userData by remember { mutableStateOf<UserData?>(null) }
+
+                                LaunchedEffect(Unit) {
+                                    scope.launch {
+                                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+                                        if (userId != null) {
+                                            val result = SupabaseClientProvider.getClient()
+                                                .from("usuarios")
+                                                .select {
+                                                    filter {
+                                                        eq("uid", userId)
+                                                    }
+                                                }
+                                                .decodeSingle<UserData>()
+                                            userData = result
+                                        }
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
+
+                                val fotoPerfil = userData?.fotoPerfil
+                                val imagenPerfil = if (fotoPerfil.isNullOrEmpty()) R.drawable.camara else null
+                                val painter = if (imagenPerfil != null) {
+                                    painterResource(id = imagenPerfil)
+                                } else {
+                                    rememberAsyncImagePainter(fotoPerfil)
+                                }
+
                                 Image(
-                                    painter = painterResource(id = R.drawable.camara),
+                                    painter = painter,
                                     contentDescription = "Profile",
                                     modifier = Modifier
                                         .size(45.dp)
@@ -90,6 +149,7 @@ fun DetalleProducto(
                                         .clickable { scope.launch { drawerState.open() } },
                                     contentScale = ContentScale.Crop
                                 )
+
                                 Spacer(modifier = Modifier.weight(0.9f))
                                 Image(
                                     painter = painterResource(id = R.drawable.logo_rojo),
@@ -97,15 +157,38 @@ fun DetalleProducto(
                                     modifier = Modifier.size(50.dp)
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
-                                Image(
-                                    painter = painterResource(id = R.drawable.cesta),
-                                    contentDescription = "Carrito",
-                                    modifier = Modifier.size(30.dp)
-                                )
+                                Box(contentAlignment = Alignment.TopEnd) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.cesta),
+                                        contentDescription = "Carrito",
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clickable { navController.navigate("carrito") }
+                                    )
+                                    if (totalCount > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = 8.dp, y = (-4).dp)
+                                                .size(16.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Red),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = totalProductos.toString(),
+                                                color = Color.White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            var searchText by remember { mutableStateOf("") }
+
+                            // Buscador clásico integrado (no superpuesto)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
