@@ -8,6 +8,9 @@ import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import com.example.uniqueartifacts.views.Ajustes
+import com.example.uniqueartifacts.views.Buscador
+import com.example.uniqueartifacts.views.Carrito
 import com.example.uniqueartifacts.views.DetalleProducto
 import com.example.uniqueartifacts.views.EditarFotoScreen
 import com.example.uniqueartifacts.views.Home
@@ -31,6 +34,14 @@ fun NavigationWrapper(
         composable("registroScreen") { RegistroScreen(navHostController) }
         composable("perfil") { PerfilScreen(navHostController) }
         composable(route = "editarfoto") { EditarFotoScreen(navHostController) }
+        composable(route = "buscador") { Buscador(navHostController) }
+        composable(route = "ajustes") {Ajustes(navHostController) }
+        composable(route = "carrito") {
+            Carrito(
+                navController = navHostController,
+                carritoViewModel = carritoViewModel
+            )
+        }
 
         composable("pantallaHome") {
             Home(
