@@ -13,8 +13,9 @@ import com.example.uniqueartifacts.ui.theme.UniqueArtifactsTheme
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import com.example.uniqueartifacts.NavigationWrapper
-import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
+import androidx.compose.runtime.LaunchedEffect
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +32,11 @@ class MainActivity : ComponentActivity() {
                     val carritoViewModel: CarritoViewModel = viewModel()
                     val detalleProductoViewModel: DetalleProductoViewModel = viewModel()
 
+                    // 🔁 Cargar productos guardados al arrancar la app
+                    LaunchedEffect(Unit) {
+                        guardadosViewModel.cargarProductosGuardadosDesdeReferencias()
+                    }
+
                     NavigationWrapper(
                         navHostController = navController,
                         guardadosViewModel = guardadosViewModel,
@@ -42,3 +48,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
