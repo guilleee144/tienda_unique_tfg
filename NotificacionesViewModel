@@ -1,0 +1,23 @@
+package com.example.uniqueartifacts.viewmodels
+
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.lifecycle.ViewModel
+import com.example.uniqueartifacts.R
+import com.example.uniqueartifacts.views.Notificacion
+
+class NotificacionesViewModel : ViewModel() {
+    private val _notificaciones = mutableStateListOf(
+        Notificacion(R.drawable.descuento, "NUEVO DESCUENTO DISPONIBLE", "Entre en ofertas para descubrir los descuentos de la temporada."),
+        Notificacion(R.drawable.caja_icono, "PAQUETE ENTREGADO CON ÉXITO", "Su paquete ha llegado con éxito a la dirección C/Maria Sarmientos 31, ha sido entregado a las 8:31 am."),
+    )
+    val notificaciones: SnapshotStateList<Notificacion> = _notificaciones
+
+    fun agregar(notificacion: Notificacion) {
+        _notificaciones.add(notificacion)
+    }
+
+    fun eliminar(notificacion: Notificacion) {
+        _notificaciones.remove(notificacion)
+    }
+}
