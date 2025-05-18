@@ -166,21 +166,22 @@ fun Carrito(navController: NavController, carritoViewModel: CarritoViewModel = v
                                     if (totalCount > 0) {
                                         Box(
                                             modifier = Modifier
-                                                .offset(x = 8.dp, y = (-4).dp)
-                                                .size(16.dp)
+                                                .offset(x = 10.dp, y = (-6).dp)
+                                                .size(20.dp) // ⬅️ Aumentamos el tamaño
                                                 .clip(CircleShape)
                                                 .background(Color.Red),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = totalProductos.toString(),
+                                                text = totalCount.toString(), // Asegúrate de usar totalCount, no toda la lista
                                                 color = Color.White,
-                                                fontSize = 10.sp,
+                                                fontSize = 12.sp, // ⬅️ Más legible
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
                                 }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
 
@@ -257,6 +258,27 @@ fun Carrito(navController: NavController, carritoViewModel: CarritoViewModel = v
                     )
 
                     ProductoEnCarritoPlaceholder()
+                    if (productosEnCarrito.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                navController.navigate("confirmarPedido")
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3598DB)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Confirmar pedido",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                 }
 
                 // ⚫️ BARRA INFERIOR (igual que antes)
