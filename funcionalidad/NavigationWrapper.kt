@@ -18,7 +18,15 @@ import com.example.uniqueartifacts.views.LoginScreen
 import com.example.uniqueartifacts.views.PantallaCarga
 import com.example.uniqueartifacts.views.PantallaInicio
 import com.example.uniqueartifacts.views.PerfilScreen
+import com.example.uniqueartifacts.views.Puntos_Ofertas
 import com.example.uniqueartifacts.views.RegistroScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.uniqueartifacts.views.CanjearCuponScreen
+import com.example.uniqueartifacts.views.ConfirmarPedido
+import com.example.uniqueartifacts.views.FormularioCompra
+import com.example.uniqueartifacts.views.Guardados
+
 
 @Composable
 fun NavigationWrapper(
@@ -36,6 +44,46 @@ fun NavigationWrapper(
         composable(route = "editarfoto") { EditarFotoScreen(navHostController) }
         composable(route = "buscador") { Buscador(navHostController) }
         composable(route = "ajustes") {Ajustes(navHostController) }
+        composable(route = "guardados") { Guardados(navHostController, guardadosViewModel, carritoViewModel) }
+        composable("puntosOfertas") {
+            Puntos_Ofertas(navController = navHostController)
+        }
+        composable("confirmarPedido") {
+            ConfirmarPedido(
+                navController = navHostController,
+                carritoViewModel = carritoViewModel,
+                detalleProductoViewModel = detalleProductoViewModel
+            )
+        }
+        composable("formularioPedido") {
+            FormularioCompra(
+                navController = navHostController,
+                carritoViewModel = carritoViewModel,
+                detalleProductoViewModel = detalleProductoViewModel
+            )
+        }
+
+        composable(
+            route = "canjearCupon?titulo={titulo}&imagen={imagen}&descuento={descuento}",
+            arguments = listOf(
+                navArgument("titulo") { type = NavType.StringType },
+                navArgument("imagen") { type = NavType.StringType },
+                navArgument("descuento") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val titulo = backStackEntry.arguments?.getString("titulo") ?: ""
+            val imagen = backStackEntry.arguments?.getString("imagen") ?: ""
+            val descuento = backStackEntry.arguments?.getString("descuento") ?: ""
+
+            CanjearCuponScreen(
+                titulo = titulo,
+                imagen = imagen,
+                descuento = descuento,
+                carritoViewModel = carritoViewModel,
+                navController = navHostController
+            )
+        }
+
         composable(route = "carrito") {
             Carrito(
                 navController = navHostController,
