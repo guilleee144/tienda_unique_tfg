@@ -1,0 +1,31 @@
+  Text("Forma de Envio", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
+
+                            listOf("Envío estandar 24 - 72 h", "Envío Premium 24h").forEach { envio ->
+                                val envioDeshabilitado = isPremium && envio != "Envío Premium 24h"
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .clickable(enabled = !envioDeshabilitado) {
+                                            selectedEnvio = envio
+                                        }
+                                        .padding(vertical = 8.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selectedEnvio == envio) Color(0xFFFFCDD2) else Color.Transparent)
+                                        .padding(horizontal = 12.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedEnvio == envio,
+                                        onClick = {
+                                            if (!envioDeshabilitado) selectedEnvio = envio
+                                        },
+                                        enabled = !envioDeshabilitado
+                                    )
+                                    Text(
+                                        envio,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                        color = if (envioDeshabilitado) Color.Gray else Color.Unspecified
+                                    )
+                                }
+                            }
