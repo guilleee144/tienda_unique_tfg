@@ -12,5 +12,6 @@ data class UserData(
     val correo: String,
     val puntos: Int = 0,
     val cuentaBancaria: String? = null,
-    val fotoPerfil: String? = null
+    val fotoPerfil: String? = null,
+    val premium: Boolean = false
 )

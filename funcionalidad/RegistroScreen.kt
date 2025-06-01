@@ -104,10 +104,10 @@ fun RegistroScreen(navController: NavController) {
         ) {
             // Título y subtítulo
             Text(
-                text = "UNIQUE",
-                fontSize = 30.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
+                text = "U N I Q U E",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Thin,
+                color = Color.White
             )
             Spacer(modifier = Modifier.height(30.dp))
             Text(

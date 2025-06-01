@@ -1,10 +1,9 @@
 package com.example.uniqueartifacts.model
-
 import kotlinx.serialization.Serializable
-
 @Serializable
-data class Producto(
-    val id: Int? = null,
+data class ProductoGuardadoInsert(
+    val uid: String,
+    val producto_id: Int,
     val categoria: String,
     val grupo: String,
     val subcategoria: String,
@@ -12,7 +11,6 @@ data class Producto(
     val precio: Double,
     val stock: Int,
     val imagen: String,
-    // Estos campos son opcionales y se usarán solo en figuras y funko pops
     val imagen2: String? = null,
     val imagen3: String? = null
 )

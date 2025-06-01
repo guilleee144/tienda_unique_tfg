@@ -2,11 +2,12 @@ package com.example.uniqueartifacts.views
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,18 +35,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.model.Producto
+import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
-
+import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 
 // Mapeo de categorías a nombres de tabla en Supabase
@@ -56,26 +60,22 @@ val categoryToTable = mapOf(
 )
 
 @Composable
-fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel) {
+fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel, detalleProductoViewModel: DetalleProductoViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     val totalCount = totalProductos.size
 
-
-
-    // Estado para la categoría seleccionada; nulo = sin filtro (aleatorio de todas)
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    // Estado para almacenar los productos consultados
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    var searchText by remember { mutableStateOf("") }
+    var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    val categorias = categoryToTable.values.toList()
 
-    // Efecto que consulta la BD cada vez que cambia la categoría seleccionada
     LaunchedEffect(selectedCategory) {
         productos = withContext(Dispatchers.IO) {
             val supabase = SupabaseClientProvider.getClient()
-
             if (selectedCategory == null) {
-                // Consulta de productos aleatorios de todas las tablas
                 val cartas = supabase.from("productos_cartas").select().decodeList<Producto>()
                 val figuras = supabase.from("productos_figuras").select().decodeList<Producto>()
                 val funkos = supabase.from("productos_funkos").select().decodeList<Producto>()
@@ -83,15 +83,31 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                 val tazas = supabase.from("productos_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
             } else {
-                // Consulta específica a la tabla mapeada
                 val tableName = categoryToTable[selectedCategory]
-                tableName?.let {
-                    supabase.from(it).select().decodeList<Producto>()
-                } ?: emptyList()
+                tableName?.let { supabase.from(it).select().decodeList<Producto>() } ?: emptyList()
             }
         }
     }
 
+    LaunchedEffect(searchText) {
+        if (searchText.isBlank()) {
+            resultadosBusqueda = emptyList()
+        } else {
+            scope.launch {
+                resultadosBusqueda = withContext(Dispatchers.IO) {
+                    val client = SupabaseClientProvider.getClient()
+                    val allProducts = categorias.flatMap { tabla ->
+                        try {
+                            client.from(tabla).select().decodeList<Producto>()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+                    allProducts.filter { it.producto.contains(searchText, ignoreCase = true) }
+                }
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -113,12 +129,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
         },
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 100.dp)
-                ) {
-                    // Navbar con fondo negro
+                Column(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -133,9 +144,38 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                var userData by remember { mutableStateOf<UserData?>(null) }
+
+                                LaunchedEffect(Unit) {
+                                    scope.launch {
+                                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+                                        if (userId != null) {
+                                            val result = SupabaseClientProvider.getClient()
+                                                .from("usuarios")
+                                                .select {
+                                                    filter {
+                                                        eq("uid", userId)
+                                                    }
+                                                }
+                                                .decodeSingle<UserData>()
+                                            userData = result
+                                        }
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
+
+                                val fotoPerfil = userData?.fotoPerfil
+                                val imagenPerfil =
+                                    if (fotoPerfil.isNullOrEmpty()) R.drawable.camara else null
+                                val painter = if (imagenPerfil != null) {
+                                    painterResource(id = imagenPerfil)
+                                } else {
+                                    rememberAsyncImagePainter(fotoPerfil)
+                                }
+
                                 Image(
-                                    painter = painterResource(id = R.drawable.grefg),
+                                    painter = painter,
                                     contentDescription = "Profile",
                                     modifier = Modifier
                                         .size(45.dp)
@@ -143,6 +183,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         .clickable { scope.launch { drawerState.open() } },
                                     contentScale = ContentScale.Crop
                                 )
+
                                 Spacer(modifier = Modifier.weight(0.9f))
                                 Image(
                                     painter = painterResource(id = R.drawable.logo_rojo),
@@ -150,9 +191,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     modifier = Modifier.size(50.dp)
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
-                                Box(
-                                    contentAlignment = Alignment.TopEnd
-                                ) {
+                                Box(contentAlignment = Alignment.TopEnd) {
                                     Image(
                                         painter = painterResource(id = R.drawable.cesta),
                                         contentDescription = "Carrito",
@@ -163,92 +202,153 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     if (totalCount > 0) {
                                         Box(
                                             modifier = Modifier
-                                                .offset(x = 8.dp, y = (-4).dp)
-                                                .size(16.dp)
+                                                .offset(x = 10.dp, y = (-6).dp)
+                                                .size(20.dp) // ⬅️ Aumentamos el tamaño
                                                 .clip(CircleShape)
                                                 .background(Color.Red),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = totalProductos.toString(),
+                                                text = totalCount.toString(), // Asegúrate de usar totalCount, no toda la lista
                                                 color = Color.White,
-                                                fontSize = 10.sp,
+                                                fontSize = 12.sp, // ⬅️ Más legible
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
                                 }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            var searchText by remember { mutableStateOf("") }
+                            var expanded by remember { mutableStateOf(false) }
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(56.dp)
-                                    .background(Color.Transparent),
-                                contentAlignment = Alignment.Center
+                                    .wrapContentHeight()
+                                    .padding(horizontal = 16.dp)
                             ) {
-                                OutlinedTextField(
-                                    value = searchText,
-                                    onValueChange = { searchText = it },
-                                    placeholder = { Text("Buscar ...", color = Color.Gray) },
-                                    leadingIcon = {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.lupa_negra),
-                                            contentDescription = "Buscar",
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    },
-                                    trailingIcon = {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.micro),
-                                            contentDescription = "Micrófono",
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.92f)
-                                        .height(50.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFC3C3C3))
-                                )
+                                Column {
+                                    OutlinedTextField(
+                                        value = searchText,
+                                        onValueChange = {
+                                            searchText = it
+                                            expanded =
+                                                it.isNotBlank() && resultadosBusqueda.isNotEmpty()
+                                        },
+                                        placeholder = { Text("Buscar ...", color = Color.Gray) },
+                                        leadingIcon = {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.lupa_negra),
+                                                contentDescription = "Buscar",
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        },
+                                        trailingIcon = {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.micro),
+                                                contentDescription = "Micrófono",
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(50.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFC3C3C3))
+                                    )
+
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.White)
+                                    ) {
+                                        resultadosBusqueda.take(5).forEach { producto ->
+                                            DropdownMenuItem(
+                                                onClick = {
+                                                    detalleProductoViewModel.productoSeleccionado.value =
+                                                        producto
+                                                    navController.navigate("detallesProducto")
+                                                    searchText = ""
+                                                    resultadosBusqueda = emptyList()
+                                                    expanded = false
+                                                },
+                                                text = {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        AsyncImage(
+                                                            model = producto.imagen,
+                                                            contentDescription = producto.producto,
+                                                            modifier = Modifier
+                                                                .size(40.dp)
+                                                                .clip(RoundedCornerShape(6.dp)),
+                                                            contentScale = ContentScale.Crop
+                                                        )
+                                                        Spacer(modifier = Modifier.width(12.dp))
+                                                        Text(
+                                                            text = producto.producto,
+                                                            fontSize = 14.sp,
+                                                            color = Color.Black,
+                                                            maxLines = 1
+                                                        )
+                                                    }
+                                                })
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(15.dp))
-                    //val scrollState = rememberScrollState()
+                        // Contenido scrollable
                     Box(modifier = Modifier.weight(1f)) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.White)
-                                .padding(bottom = 100.dp)
-                        ) {
-                            // Categorías: elementos clicables que actualizan la categoría seleccionada
+                                .verticalScroll(rememberScrollState())
+                                .padding(bottom = 100.dp)) {
+                            // Aquí se integra el contenido directamente sin funciones extra
+                            val categories = listOf("Figuras", "Funko Pops", "Cartas", "Camisetas", "Tazas")
                             LazyRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 contentPadding = PaddingValues(horizontal = 16.dp)
                             ) {
-                                val categories = listOf("Figuras", "Funko Pops", "Cartas", "Camisetas", "Tazas")
                                 items(categories) { category ->
-                                    CategoriaItem(
-                                        titulo = category,
-                                        imagenRes = when (category) {
-                                            "Figuras" -> R.drawable.zoro
-                                            "Funko Pops" -> R.drawable.pops
-                                            "Cartas" -> R.drawable.cartas
-                                            "Camisetas" -> R.drawable.camiseta
-                                            "Tazas" -> R.drawable.taza
-                                            else -> R.drawable.logo_rojo
-                                        },
-                                        onClick = { selectedCategory = category }
-                                    )
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable { selectedCategory = category }
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = when (category) {
+                                                "Figuras" -> R.drawable.zoro
+                                                "Funko Pops" -> R.drawable.pops
+                                                "Cartas" -> R.drawable.cartas
+                                                "Camisetas" -> R.drawable.camiseta
+                                                "Tazas" -> R.drawable.taza
+                                                else -> R.drawable.logo_rojo
+                                            }),
+                                            contentDescription = category,
+                                            modifier = Modifier
+                                                .size(100.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(Color.White)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = category,
+                                            textAlign = TextAlign.Center,
+                                            color = Color(0xFF8B8B8B),
+                                            fontSize = 14.sp
+                                        )
+                                    }
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(25.dp))
-                            // Banner de nueva colección
+
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -270,47 +370,122 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         .height(150.dp)
                                 )
                             }
+
                             Spacer(modifier = Modifier.height(20.dp))
-                            // Título de productos según categoría (si no hay categoría, "Destacados")
+
                             Text(
                                 text = selectedCategory ?: "Destacados",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                             )
-                            // Agrupar productos por subcategoría (si es que tienen)
+
                             val grouped = productos.groupBy { it.subcategoria }
-                            LazyColumn {
-                                grouped.forEach { (subcategoria, list) ->
-                                    item {
-                                        Text(
-                                            text = subcategoria,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                                        )
-                                    }
-                                    items(list, key = { it.id ?: 0 }) { producto ->
-                                        // Cada producto se muestra con imagen, nombre y precio
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                                .clickable { /* Acción al pulsar el producto */ },
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            AsyncImage(
-                                                model = producto.imagen,
-                                                contentDescription = producto.producto,
-                                                modifier = Modifier
-                                                    .size(64.dp)
-                                                    .clip(RoundedCornerShape(8.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(text = producto.producto, fontWeight = FontWeight.Bold)
-                                                Text(text = "€ ${producto.precio}", color = Color.Gray)
+                            grouped.forEach { (subcategoria, list) ->
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = subcategoria,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                                    )
+                                    val productosGuardados by guardadosViewModel.productosGuardados.collectAsState()
+
+                                    LazyRow(
+                                        contentPadding = PaddingValues(horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        itemsIndexed(list) { index, producto ->
+                                            key("${producto.id ?: "null"}_$index") {
+                                                val estaGuardado =
+                                                    guardadosViewModel.productoEstaGuardado(producto)
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(160.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(Color.White)
+                                                        .clickable {
+                                                            detalleProductoViewModel.productoSeleccionado.value =
+                                                                producto
+                                                            navController.navigate("detallesProducto")
+                                                        }
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.padding(8.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(160.dp)
+                                                        ) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .padding(8.dp)
+                                                                    .background(
+                                                                        Color(0xFFEDEDED),
+                                                                        RoundedCornerShape(8.dp)
+                                                                    )
+                                                            ) {
+                                                                AsyncImage(
+                                                                    model = producto.imagen,
+                                                                    contentDescription = producto.producto,
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .clip(RoundedCornerShape(8.dp)),
+                                                                    contentScale = ContentScale.Fit
+                                                                )
+                                                            }
+                                                            Image(
+                                                                painter = painterResource(
+                                                                    id = if (estaGuardado) R.drawable.guardar_activado else R.drawable.guardar_desactivado
+                                                                ),
+                                                                contentDescription = "Guardar",
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(6.dp)
+                                                                    .size(22.dp)
+                                                                    .clickable {
+                                                                        guardadosViewModel.toggleGuardado(
+                                                                            producto
+                                                                        )
+                                                                    }
+                                                            )
+                                                        }
+
+                                                        Spacer(modifier = Modifier.height(6.dp))
+                                                        Text(
+                                                            text = producto.producto,
+                                                            fontWeight = FontWeight.Medium,
+                                                            fontSize = 13.sp,
+                                                            color = Color.Black,
+                                                            textAlign = TextAlign.Center,
+                                                            maxLines = 2,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        )
+                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(
+                                                                    Color(0xFFFF7F7F),
+                                                                    RoundedCornerShape(6.dp)
+                                                                )
+                                                                .padding(
+                                                                    horizontal = 8.dp,
+                                                                    vertical = 2.dp
+                                                                )
+                                                        ) {
+                                                            Text(
+                                                                text = "${producto.precio} €",
+                                                                fontSize = 12.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.White
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -318,71 +493,72 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                             }
                         }
                     }
-                }
-                // Barra inferior fija
-                Column(
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(20.dp)
-                            .background(Color.Black)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                            .background(Color.Black)
+
+                    // Barra inferior fija
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        val currentRoute = navController.currentBackStackEntry?.destination?.route
-                        val items = listOf(
-                            Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_gris else R.drawable.logo_rojo, "pantallaHome"),
-                            Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa else R.drawable.lupa_a, "buscador"),
-                            Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
-                            Triple("GUARDADOS", R.drawable.guardado, "guardados"),
-                            Triple("AJUSTES", R.drawable.ajustes, "ajustes")
-                        )
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceAround,
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(20.dp)
+                                .background(Color.Black)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .background(Color.Black)
                         ) {
-                            items.forEach { (label, icon, route) ->
-                                Button(
-                                    onClick = {
-                                        if (route != currentRoute) {
-                                            navController.navigate(route) {
-                                                popUpTo("pantallaHome") { inclusive = false }
-                                                launchSingleTop = true
+                            val currentRoute = navController.currentBackStackEntry?.destination?.route
+                            val items = listOf(
+                                Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_rojo else R.drawable.logo_gris, "pantallaHome"),
+                                Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa else R.drawable.lupa_a, "buscador"),
+                                Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
+                                Triple("GUARDADOS", R.drawable.guardado, "guardados"),
+                                Triple("AJUSTES", R.drawable.ajustes, "ajustes")
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceAround,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                items.forEach { (label, icon, route) ->
+                                    Button(
+                                        onClick = {
+                                            if (route != currentRoute) {
+                                                navController.navigate(route) {
+                                                    popUpTo("pantallaHome") { inclusive = false }
+                                                    launchSingleTop = true
+                                                }
                                             }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                                        contentPadding = PaddingValues(0.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Image(
+                                                painter = painterResource(id = icon),
+                                                contentDescription = label,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = label,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (currentRoute == route) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (currentRoute == route) Color.White else Color.Gray,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 4.dp)
+                                            )
                                         }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                    elevation = ButtonDefaults.buttonElevation(0.dp),
-                                    contentPadding = PaddingValues(0.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Image(
-                                            painter = painterResource(id = icon),
-                                            contentDescription = label,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = label,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (currentRoute == route) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (currentRoute == route) Color.White else Color.Gray,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 4.dp)
-                                        )
                                     }
                                 }
                             }
@@ -393,6 +569,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
         }
     )
 }
+
 
 @Composable
 fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
@@ -420,6 +597,26 @@ fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
 
 @Composable
 fun MenuLateral(navController: NavController, onClose: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var userData by remember { mutableStateOf<UserData?>(null) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid
+            if (userId != null) {
+                val result = SupabaseClientProvider.getClient()
+                    .from("usuarios")
+                    .select {
+                        filter {
+                            eq("uid", userId)
+                        }
+                    }
+                    .decodeSingle<UserData>()
+                userData = result
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxHeight()
@@ -431,34 +628,48 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
             modifier = Modifier.size(120.dp),
             contentAlignment = Alignment.BottomEnd
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.grefg),
-                contentDescription = "Profile",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        navController.navigate("editarfoto")
-                        onClose()
-                    }
-            )
-            Image(
-                painter = painterResource(id = R.drawable.editar_usuario),
-                contentDescription = "Icon Overlay",
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .padding(4.dp)
-            )
+            val fotoPerfil = userData?.fotoPerfil
+            val imagenPerfil = if (fotoPerfil.isNullOrEmpty()) R.drawable.camara else null
+            val painter = if (imagenPerfil != null) {
+                painterResource(id = imagenPerfil)
+            } else {
+                rememberAsyncImagePainter(fotoPerfil)
+            }
+            Box(
+                modifier = Modifier.size(120.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                Image(
+                    painter = painter,
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.editar_usuario),
+                    contentDescription = "Icon Overlay",
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(4.dp)
+                        .clickable {
+                            navController.navigate("editarfoto")
+                            onClose()
+                        }
+                )
+            }
+
         }
         Spacer(modifier = Modifier.height(15.dp))
         Text(
-            text = "David Muñoz",
+            text = "${userData?.nombre ?: ""} ${userData?.apellidos ?: ""}",
             fontSize = 24.sp,
             color = Color.White
         )
         Spacer(modifier = Modifier.height(70.dp))
+
         Button(
             onClick = { navController.navigate("perfil") },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF444444)),
@@ -487,6 +698,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("puntosOfertas") },
@@ -516,6 +728,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("premium") },
@@ -545,6 +758,7 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = { navController.navigate("notificaciones") },
