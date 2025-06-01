@@ -15,6 +15,7 @@ import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import com.example.uniqueartifacts.NavigationWrapper
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import androidx.compose.runtime.LaunchedEffect
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
@@ -31,6 +32,8 @@ class MainActivity : ComponentActivity() {
                     val guardadosViewModel: GuardadosViewModel = viewModel()
                     val carritoViewModel: CarritoViewModel = viewModel()
                     val detalleProductoViewModel: DetalleProductoViewModel = viewModel()
+                    val notificacionesViewModel = viewModel<NotificacionesViewModel>()
+
 
                     // 🔁 Cargar productos guardados al arrancar la app
                     LaunchedEffect(Unit) {
@@ -41,7 +44,8 @@ class MainActivity : ComponentActivity() {
                         navHostController = navController,
                         guardadosViewModel = guardadosViewModel,
                         carritoViewModel = carritoViewModel,
-                        detalleProductoViewModel = detalleProductoViewModel
+                        detalleProductoViewModel = detalleProductoViewModel,
+                        notificacionesViewModel
                     )
                 }
             }
