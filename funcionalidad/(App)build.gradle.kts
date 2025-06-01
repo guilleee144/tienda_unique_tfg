@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.datastore.preferences.core.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -65,7 +66,12 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
-    implementation("io.github.jan-tennert.supabase:storage-kt:1.22.11")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("io.github.jan-tennert.supabase:storage-kt-android:3.1.4")
+
+
+
 
     implementation("io.ktor:ktor-client-android:3.1.1")
     implementation("io.coil-kt:coil-compose:2.4.0")
