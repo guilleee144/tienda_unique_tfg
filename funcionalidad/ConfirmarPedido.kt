@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -29,12 +30,16 @@ import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
+import com.example.uniqueartifacts.views.notificarEvento
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 @Composable
 fun ConfirmarPedido(
@@ -56,30 +61,29 @@ fun ConfirmarPedido(
     var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
     val categorias = categoryToTable.values.toList()
 
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
 
-        // Búsqueda en tiempo real
-        LaunchedEffect(searchText) {
-            if (searchText.isBlank()) {
-                resultadosBusqueda = emptyList()
-            } else {
-                scope.launch {
-                    resultadosBusqueda = withContext(Dispatchers.IO) {
-                        val client = SupabaseClientProvider.getClient()
-                        val allProducts = categorias.flatMap { tabla ->
-                            try {
-                                client.from(tabla).select().decodeList<Producto>()
-                            } catch (e: Exception) {
-                                emptyList()
+        var userData by remember { mutableStateOf<UserData?>(null) }
+
+        LaunchedEffect(Unit) {
+            scope.launch {
+                val userId = FirebaseAuth.getInstance().currentUser?.uid
+                if (userId != null) {
+                    val result = SupabaseClientProvider.getClient()
+                        .from("usuarios")
+                        .select {
+                            filter {
+                                eq("uid", userId)
                             }
                         }
-                        allProducts.filter {
-                            it.producto.contains(searchText, ignoreCase = true)
-                        }
-                    }
+                        .decodeSingle<UserData>()
+                    userData = result
                 }
             }
         }
+
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -179,15 +183,15 @@ fun ConfirmarPedido(
                                             Box(
                                                 modifier = Modifier
                                                     .offset(x = 10.dp, y = (-6).dp)
-                                                    .size(20.dp) // ⬅️ Aumentamos el tamaño
+                                                    .size(20.dp)
                                                     .clip(CircleShape)
                                                     .background(Color.Red),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = totalCount.toString(), // Asegúrate de usar totalCount, no toda la lista
+                                                    text = totalCount.toString(),
                                                     color = Color.White,
-                                                    fontSize = 12.sp, // ⬅️ Más legible
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                             }
@@ -199,7 +203,6 @@ fun ConfirmarPedido(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                // Buscador clásico integrado (no superpuesto)
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -235,125 +238,172 @@ fun ConfirmarPedido(
                             }
                         }
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState())
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+                        // CONTENIDO COMPLETO
 
-            Text(
-                text = "Confirmar Pedido",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+                        Column(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState())
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
 
-            productosEnCarrito.forEach { item ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFFFCDD2))
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = item.producto.imagen,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(item.producto.producto, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("x ${item.cantidad}", fontSize = 14.sp)
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "+ ${item.producto.precio.toInt() * 100} ",
+                                text = "Confirmar Pedido",
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp
+                                modifier = Modifier.padding(bottom = 16.dp)
                             )
-                            Image(
-                                painter = painterResource(id = R.drawable.logo_blanco),
-                                contentDescription = "Puntos",
+
+                            productosEnCarrito.forEach { item ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFFFFCDD2))
+                                ) {
+                                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        AsyncImage(
+                                            model = item.producto.imagen,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(60.dp)
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(item.producto.producto, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text("x ${item.cantidad}", fontSize = 14.sp)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "+ ${item.producto.precio.toInt() * 100} ",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 24.sp
+                                            )
+                                            Image(
+                                                painter = painterResource(id = R.drawable.logo_blanco),
+                                                contentDescription = "Puntos",
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .padding(start = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // 🔴 FORMA DE ENVÍO
+                            Text("Forma de Envio", fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val usuarioEsPremium = userData?.premium == true
+
+// Opción estándar
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .padding(start = 4.dp)
-                            )
+                                    .fillMaxWidth()
+                                    .clickable { selectedEnvio = "Envío estandar 24 - 72 h" }
+                                    .padding(vertical = 8.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (selectedEnvio == "Envío estandar 24 - 72 h") Color(0xFFFFCDD2) else Color.Transparent)
+                                    .padding(horizontal = 12.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedEnvio == "Envío estandar 24 - 72 h",
+                                    onClick = { selectedEnvio = "Envío estandar 24 - 72 h" }
+                                )
+                                Text("Envío estandar 24 - 72 h", modifier = Modifier.padding(start = 8.dp))
+                            }
+
+// Opción premium
+                            val premiumDisponible = usuarioEsPremium
+
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .then(if (premiumDisponible) Modifier.clickable { selectedEnvio = "Envío Premium 24h" } else Modifier)
+                                        .padding(vertical = 8.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (selectedEnvio == "Envío Premium 24h") Color(0xFFFFCDD2)
+                                            else if (!premiumDisponible) Color(0xFFE0E0E0)
+                                            else Color.Transparent
+                                        )
+                                        .padding(horizontal = 12.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedEnvio == "Envío Premium 24h",
+                                        onClick = { if (premiumDisponible) selectedEnvio = "Envío Premium 24h" },
+                                        enabled = premiumDisponible
+                                    )
+                                    Text(
+                                        "Envío Premium 24h",
+                                        modifier = Modifier.padding(start = 8.dp),
+                                        color = if (premiumDisponible) Color.Unspecified else Color.Gray
+                                    )
+                                }
+                                if (!premiumDisponible) {
+                                    Text(
+                                        text = "Solo para usuarios Premium",
+                                        fontSize = 12.sp,
+                                        color = Color.Gray,
+                                        modifier = Modifier.padding(start = 48.dp, bottom = 4.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+// ✅ MÉTODO DE PAGO (no tocar)
+                            Text("Método de Pago", fontWeight = FontWeight.Bold)
+                            listOf("Pago con Tarjeta (Seguro)", "PayPal").forEach { metodo ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedPago = metodo }
+                                        .padding(vertical = 8.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selectedPago == metodo) Color(0xFFFFCDD2) else Color.Transparent)
+                                        .padding(horizontal = 12.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedPago == metodo,
+                                        onClick = { selectedPago = metodo }
+                                    )
+                                    Text(metodo, modifier = Modifier.padding(start = 8.dp))
+                                }
+                            }
+
+
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Button(
+                                onClick = {
+                                    notificarEvento("compra", notificacionesViewModel)
+                                    navController.navigate("formularioPedido")
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A80)),
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Siguiente")
+                            }
                         }
 
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Forma de Envio", fontWeight = FontWeight.Bold)
-            listOf("Envío estandar 24 - 72 h", "Envío Premium 24h").forEach { envio ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { selectedEnvio = envio }
-                        .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (selectedEnvio == envio) Color(0xFFFFCDD2) else Color.Transparent)
-                        .padding(horizontal = 12.dp)
-                ) {
-                    RadioButton(
-                        selected = selectedEnvio == envio,
-                        onClick = { selectedEnvio = envio }
-                    )
-                    Text(envio, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Método de Pago", fontWeight = FontWeight.Bold)
-            listOf("Pago con Tarjeta (Seguro)", "PayPal").forEach { metodo ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { selectedPago = metodo }
-                        .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (selectedPago == metodo) Color(0xFFFFCDD2) else Color.Transparent)
-                        .padding(horizontal = 12.dp)
-                ) {
-                    RadioButton(
-                        selected = selectedPago == metodo,
-                        onClick = { selectedPago = metodo }
-                    )
-                    Text(metodo, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { navController.navigate("formularioPedido") },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A80)),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Siguiente")
-            }
-        }
-
-            Spacer(modifier = Modifier.height(120.dp))
-        }
+                        Spacer(modifier = Modifier.height(120.dp))
 
                         Box(modifier = Modifier.fillMaxSize()) {
-
-
-                            // ⚫️ BARRA INFERIOR (igual que antes)
                             Column(
-                                modifier = Modifier.align(Alignment.BottomCenter) // ✅ ahora es válido
+                                modifier = Modifier.align(Alignment.BottomCenter)
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -420,9 +470,9 @@ fun ConfirmarPedido(
                                 }
                             }
                         }
-}
+                    }
+                }
             }
         )
     }
 }
-

@@ -257,7 +257,7 @@ fun Carrito(navController: NavController, carritoViewModel: CarritoViewModel = v
                         fontSize = 16.sp
                     )
 
-                    ProductoEnCarritoPlaceholder()
+                    ProductoEnCarritoPlaceholder(navController)
                     if (productosEnCarrito.isNotEmpty()) {
                         Button(
                             onClick = {
@@ -446,13 +446,16 @@ fun ProductoEnCarritoCard(
 }
 
 @Composable
-fun ProductoEnCarritoPlaceholder() {
+fun ProductoEnCarritoPlaceholder(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .border(1.dp, Color.Gray, shape = RoundedCornerShape(8.dp)),
+            .border(1.dp, Color.Gray, shape = RoundedCornerShape(8.dp))
+            .clickable {
+                navController.navigate("buscador")
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(text = "+", fontSize = 30.sp, color = Color.Gray, fontWeight = FontWeight.Bold)

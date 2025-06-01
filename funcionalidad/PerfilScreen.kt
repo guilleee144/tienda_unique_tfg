@@ -234,4 +234,3 @@ fun EditableCampo(label: String, value: String, onValueChange: (String) -> Unit)
         Divider(color = Color.Gray, thickness = 1.dp)
     }
 }
-

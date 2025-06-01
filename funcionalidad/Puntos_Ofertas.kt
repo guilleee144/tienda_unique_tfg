@@ -39,8 +39,7 @@ import com.example.uniqueartifacts.model.Oferta
 
 
 
-data class Oferta(val titulo: String, val imagen: String, val precio: String)
-data class Cupon(val titulo: String, val imagenUrl: String, val descuento: String)
+
 val tablasProductos = listOf(
     "productos_figuras",
     "productos_tazas",
@@ -62,7 +61,6 @@ fun Puntos_Ofertas(navController: NavController) {
         val minutos = ((restante / (1000 * 60)) % 60).toInt()
         return if (horas > 0) "$horas h $minutos min" else "$minutos min"
     }
-
 
     val categorias = categoryToTable.values.toList()
     var ofertasDinamicas by remember { mutableStateOf<List<Producto>>(emptyList()) }
@@ -103,6 +101,11 @@ fun Puntos_Ofertas(navController: NavController) {
                         cuponesDinamicos = Json.decodeFromString(datos.cupones)
                         loading = false
                         return@LaunchedEffect
+                    } else {
+                        // Eliminar registros antiguos
+                        client.from("puntos_dinamicos").delete {
+                            filter { eq("uid", userId) }
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -131,7 +134,7 @@ fun Puntos_Ofertas(navController: NavController) {
                     )
                 }
 
-                val timestampNow = kotlinx.datetime.Clock.System.now()
+                val timestampNow = Clock.System.now()
                 ultimaActualizacion = timestampNow
 
                 client.from("puntos_dinamicos").insert(

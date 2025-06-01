@@ -168,21 +168,22 @@ fun DetalleProducto(
                                     if (totalCount > 0) {
                                         Box(
                                             modifier = Modifier
-                                                .offset(x = 8.dp, y = (-4).dp)
-                                                .size(16.dp)
+                                                .offset(x = 10.dp, y = (-6).dp)
+                                                .size(20.dp) // ⬅️ Aumentamos el tamaño
                                                 .clip(CircleShape)
                                                 .background(Color.Red),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = totalProductos.toString(),
+                                                text = totalCount.toString(), // Asegúrate de usar totalCount, no toda la lista
                                                 color = Color.White,
-                                                fontSize = 10.sp,
+                                                fontSize = 12.sp, // ⬅️ Más legible
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
                                 }
+
                                 Spacer(modifier = Modifier.weight(0.1f))
                             }
 

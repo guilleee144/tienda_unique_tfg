@@ -30,6 +30,7 @@ import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,8 @@ import kotlinx.coroutines.withContext
 fun FormularioCompra(
     navController: NavController,
     carritoViewModel: CarritoViewModel,
-    detalleProductoViewModel: DetalleProductoViewModel
+    detalleProductoViewModel: DetalleProductoViewModel,
+    notificacionesViewModel: NotificacionesViewModel
 ) {
     val productosEnCarrito by carritoViewModel.productosEnCarrito.collectAsState()
     val scope = rememberCoroutineScope()
@@ -311,6 +313,13 @@ fun FormularioCompra(
                                                             "precio" to it.producto.precio
                                                         )
                                                     }
+                                                )
+                                            )
+                                            notificacionesViewModel.agregar(
+                                                Notificacion(
+                                                    icono = R.drawable.caja_icono,
+                                                    titulo = "Compra confirmada",
+                                                    descripcion = "Tu pedido ha sido registrado correctamente. ¡Gracias por tu compra!"
                                                 )
                                             )
                                             navController.navigate("confirmacionPedido")

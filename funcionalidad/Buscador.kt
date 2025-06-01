@@ -1,5 +1,6 @@
 package com.example.uniqueartifacts.views
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,13 +29,14 @@ import coil.compose.AsyncImage
 import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
+import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun Buscador(navController: NavController) {
+fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel) {
     val scope = rememberCoroutineScope()
     var productosSugeridos by remember { mutableStateOf<List<Producto>>(emptyList()) }
     var searchText by remember { mutableStateOf("") }
@@ -134,8 +136,9 @@ fun Buscador(navController: NavController) {
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(productosSugeridos) { producto ->
-                        SugerenciaItem(nombre = producto.producto, subtitulo = "Producto sugerido", imagenUrl = producto.imagen)
+                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel)
                     }
+
                 }
             } else {
                 Text("Resultados", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -147,8 +150,9 @@ fun Buscador(navController: NavController) {
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(resultadosBusqueda) { producto ->
-                        SugerenciaItem(nombre = producto.producto, subtitulo = producto.categoria ?: "", imagenUrl = producto.imagen)
+                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel)
                     }
+
                 }
             }
         }
@@ -219,17 +223,28 @@ fun Buscador(navController: NavController) {
 }
 
 @Composable
-fun SugerenciaItem(nombre: String, subtitulo: String, imagenUrl: String?) {
+fun SugerenciaItem(
+    producto: Producto,
+    navController: NavController,
+    carritoViewModel: CarritoViewModel
+) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable {
+                    val safeNombre = Uri.encode(producto.producto)
+                    val safeImagen = Uri.encode(producto.imagen ?: "")
+                    navController.navigate("detallesProducto?id=${producto.id}&nombre=$safeNombre&imagen=$safeImagen&precio=${producto.precio.toFloat()}")
+
+                }
+
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = imagenUrl,
-                contentDescription = nombre,
+                model = producto.imagen,
+                contentDescription = producto.producto,
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(10.dp))
@@ -240,12 +255,12 @@ fun SugerenciaItem(nombre: String, subtitulo: String, imagenUrl: String?) {
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(nombre, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(subtitulo, color = Color.Gray, fontSize = 14.sp)
+                Text(producto.producto, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(producto.categoria ?: "", color = Color.Gray, fontSize = 14.sp)
             }
 
             Button(
-                onClick = { /* lógica del carrito */ },
+                onClick = { carritoViewModel.agregarAlCarrito(producto) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B6B)),
                 shape = RoundedCornerShape(50.dp),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
@@ -258,3 +273,4 @@ fun SugerenciaItem(nombre: String, subtitulo: String, imagenUrl: String?) {
         Divider(color = Color.Gray.copy(alpha = 0.4f), thickness = 1.dp)
     }
 }
+

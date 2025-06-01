@@ -25,6 +25,7 @@ import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel) {
+fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel, notificacionesViewModel: NotificacionesViewModel ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var searchText by remember { mutableStateOf("") }
@@ -284,6 +285,24 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                                         .size(22.dp)
                                                         .clickable {
                                                             guardadosViewModel.toggleGuardado(producto)
+                                                            val estaAhoraGuardado = guardadosViewModel.productoEstaGuardado(producto)
+                                                            if (estaAhoraGuardado) {
+                                                                notificacionesViewModel.agregar(
+                                                                    Notificacion(
+                                                                        icono = R.drawable.descuento, // Usa un ícono que tengas
+                                                                        titulo = "Producto guardado",
+                                                                        descripcion = "${producto.producto} ha sido añadido a tus favoritos."
+                                                                    )
+                                                                )
+                                                            } else {
+                                                                notificacionesViewModel.agregar(
+                                                                    Notificacion(
+                                                                        icono = R.drawable.alerta, // O el ícono de papelera
+                                                                        titulo = "Producto eliminado",
+                                                                        descripcion = "${producto.producto} ha sido eliminado de tus guardados."
+                                                                    )
+                                                                )
+                                                            }
                                                         }
                                                 )
                                             }
@@ -321,7 +340,7 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                     }
                                 }
                                 if (fila.size == 1) {
-                                    AddCardButton()
+                                    AddCardButton(navController)
                                 }
                             }
                         }
@@ -331,7 +350,7 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Start
                             ) {
-                                AddCardButton()
+                                AddCardButton(navController)
                             }
                         }
                     }
@@ -414,7 +433,7 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
 }
 
 @Composable
-fun AddCardButton() {
+fun AddCardButton(navController: NavController) {
     Box(
         modifier = Modifier
             .padding(8.dp)
@@ -422,7 +441,10 @@ fun AddCardButton() {
             .background(Color.White)
             .border(1.dp, Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
             .width(160.dp)
-            .height(220.dp),
+            .height(220.dp)
+            .clickable {
+                navController.navigate("buscador")
+            },
         contentAlignment = Alignment.Center
     ) {
         Text("+", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Color.Black)

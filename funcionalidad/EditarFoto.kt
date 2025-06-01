@@ -3,6 +3,7 @@ package com.example.uniqueartifacts.views
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -47,19 +48,44 @@ fun EditarFotoScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     var userData by remember { mutableStateOf<UserData?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        selectedImageUri = uri
-    }
+    val galleryAndUploadLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            scope.launch {
+                try {
+                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                    val fileName = "perfil_$uid.jpg"
+                    val imageBytes = uriToByteArray(context, it)
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        // Foto tomada con éxito
-    }
+                    val supabase = SupabaseClientProvider.getClient()
+                    supabase.storage.from("fotosusuarios").upload(
+                        path = fileName,
+                        data = imageBytes,
+                        options = { upsert = true }
+                    )
 
-    val tempImageFile = remember {
-        File.createTempFile("profile_temp", ".jpg", context.cacheDir).apply {
-            deleteOnExit()
+                    val publicUrl = supabase.storage.from("fotosusuarios").publicUrl(fileName)
+
+                    supabase.from("usuarios").update(
+                        mapOf("fotoPerfil" to publicUrl)
+                    ) {
+                        filter { eq("uid", uid) }
+                    }
+
+                    userData = userData?.copy(fotoPerfil = publicUrl)
+
+                    snackbarHostState.showSnackbar("✅ Foto actualizada correctamente")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("❌ Error al subir la foto")
+                }
+            }
         }
+    }
+    val tempImageFile = remember {
+        File.createTempFile("profile_temp", ".jpg", context.cacheDir).apply { deleteOnExit() }
     }
 
     val imageUri = FileProvider.getUriForFile(
@@ -67,6 +93,42 @@ fun EditarFotoScreen(navController: NavController) {
         context.packageName + ".provider",
         tempImageFile
     )
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            selectedImageUri = imageUri
+            scope.launch {
+                try {
+                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                    val fileName = "perfil_$uid.jpg"
+                    val imageBytes = uriToByteArray(context, imageUri)
+
+                    val supabase = SupabaseClientProvider.getClient()
+                    supabase.storage.from("fotosusuarios").upload(
+                        path = fileName,
+                        data = imageBytes,
+                        options = { upsert = true }
+                    )
+
+                    val publicUrl = supabase.storage.from("fotosusuarios").publicUrl(fileName)
+
+                    supabase.from("usuarios").update(
+                        mapOf("fotoPerfil" to publicUrl)
+                    ) {
+                        filter { eq("uid", uid) }
+                    }
+
+                    userData = userData?.copy(fotoPerfil = publicUrl)
+                    snackbarHostState.showSnackbar("✅ Foto de cámara actualizada")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("❌ Error al subir la foto de cámara")
+                }
+            }
+        }
+    }
+
+
+
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -79,130 +141,135 @@ fun EditarFotoScreen(navController: NavController) {
             userData = result
         }
     }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 40.dp),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.atras),
-                        contentDescription = "Volver",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
+    if (showDialog && !userData?.fotoPerfil.isNullOrEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cerrar")
                 }
-                Spacer(modifier = Modifier.width(80.dp))
-                Text(
-                    modifier = Modifier.padding(top = 5.dp),
-                    text = "Editar Foto",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val fotoPerfil = userData?.fotoPerfil
-                val painter = if (selectedImageUri != null) {
-                    rememberAsyncImagePainter(selectedImageUri)
-                } else if (!fotoPerfil.isNullOrEmpty()) {
-                    rememberAsyncImagePainter(fotoPerfil)
-                } else {
-                    painterResource(id = R.drawable.camara)
-                }
-
+            },
+            title = { Text("Vista de Foto", fontWeight = FontWeight.Bold) },
+            text = {
                 Image(
-                    painter = painter,
-                    contentDescription = "Foto de Perfil",
+                    painter = rememberAsyncImagePainter(userData?.fotoPerfil),
+                    contentDescription = "Foto de perfil ampliada",
                     modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape),
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
+            },
+            containerColor = Color.White
+        )
+    }
 
-                Spacer(modifier = Modifier.width(20.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .clickable { galleryLauncher.launch("image/*") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.mas),
-                        contentDescription = "Agregar Foto",
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-
+    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .padding(16.dp)
+                .padding(paddingValues)
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                BotonAccion("Hacer foto", R.drawable.camara) {
-                    cameraLauncher.launch(imageUri)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 40.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.atras),
+                            contentDescription = "Volver",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(80.dp))
+                    Text(
+                        modifier = Modifier.padding(top = 5.dp),
+                        text = "Editar Foto",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                BotonAccion("Subir Foto", R.drawable.archivos) {
-                    selectedImageUri?.let { uri ->
-                        scope.launch {
-                            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
-                            val fileName = "perfil_$uid.jpg"
-                            val imageBytes = uriToByteArray(context, uri)
 
-                            val supabase = SupabaseClientProvider.getClient()
-                            supabase.storage.from("fotos_usuarios").upload(fileName, imageBytes) {
-                                upsert = true
-                            }
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val fotoPerfil = userData?.fotoPerfil
+                    val painter = if (selectedImageUri != null) {
+                        rememberAsyncImagePainter(selectedImageUri)
+                    } else if (!fotoPerfil.isNullOrEmpty()) {
+                        rememberAsyncImagePainter(fotoPerfil)
+                    } else {
+                        painterResource(id = R.drawable.camara)
+                    }
 
-                            val imageUrl = "https://ddatdozwiwxabnlomnad.supabase.co/storage/v1/object/public/fotos_usuarios/$fileName"
+                    Image(
+                        painter = painter,
+                        contentDescription = "Foto de Perfil",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
 
-                            supabase.from("usuarios").update(
-                                mapOf("fotoPerfil" to imageUrl)
-                            ) {
-                                filter { eq("uid", uid) }
-                            }
+                    Spacer(modifier = Modifier.width(20.dp))
 
-                            userData = userData?.copy(fotoPerfil = imageUrl)
-                        }
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .clickable { galleryAndUploadLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.mas),
+                            contentDescription = "Agregar Foto",
+                            modifier = Modifier.size(40.dp)
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                BotonAccion("Ver foto", R.drawable.ocultar) {
-                    showDialog = true
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BotonAccion("Hacer foto", R.drawable.camara) {
+                        cameraLauncher.launch(imageUri)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    BotonAccion("Subir Foto", R.drawable.archivos) {
+                        galleryAndUploadLauncher.launch("image/*")
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    BotonAccion("Ver foto", R.drawable.ocultar) {
+                        showDialog = true
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Image(
+                    painter = painterResource(id = R.drawable.logo_gris_grande),
+                    contentDescription = "Logo_gris",
+                    modifier = Modifier.size(120.dp)
+                )
+                Spacer(modifier = Modifier.height(30.dp))
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Image(
-                painter = painterResource(id = R.drawable.logo_gris_grande),
-                contentDescription = "Logo_gris",
-                modifier = Modifier.size(120.dp)
-            )
-            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }

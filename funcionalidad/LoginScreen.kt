@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -29,6 +30,13 @@ import androidx.navigation.NavController
 import com.example.uniqueartifacts.R
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.GoogleAuthProvider
+
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -40,6 +48,36 @@ fun LoginScreen(navController: NavController) {
 
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+
+            auth.signInWithCredential(credential)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        navController.navigate("pantallaHome") {
+                            popUpTo("loginScreen") { inclusive = true }
+                        }
+                    } else {
+                        errorMessage = "Error al iniciar sesión con Google"
+                    }
+                }
+        } catch (e: ApiException) {
+            errorMessage = "Google Sign-In falló: ${e.localizedMessage}"
+        }
+    }
+
+    val signInRequest = remember {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        GoogleSignIn.getClient(context, gso).signInIntent
+    }
 
     Box(
         modifier = Modifier
@@ -55,10 +93,10 @@ fun LoginScreen(navController: NavController) {
         ) {
             // Título principal
             Text(
-                text = "UNIQUE",
-                fontSize = 30.sp,
-                color = Color.White,
-                lineHeight = 34.sp
+                text = "U N I Q U E",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Thin,
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -151,7 +189,7 @@ fun LoginScreen(navController: NavController) {
             // Botón "Continuar con Google" (solo UI; se debe implementar la lógica)
             Button(
                 onClick = {
-                    errorMessage = "Lógica de Google Sign-In pendiente"
+                    launcher.launch(signInRequest)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,6 +211,7 @@ fun LoginScreen(navController: NavController) {
                     )
                 }
             }
+
 
             Spacer(modifier = Modifier.height(30.dp))
 
@@ -197,5 +236,5 @@ fun LoginScreen(navController: NavController) {
             }
         }
     }
-}
 
+}

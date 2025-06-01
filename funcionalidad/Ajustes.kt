@@ -1,7 +1,10 @@
 package com.example.uniqueartifacts.views
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -33,11 +36,22 @@ import androidx.navigation.NavController
 import com.example.uniqueartifacts.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
+val Context.dataStore by preferencesDataStore(name = "ajustes_usuario")
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun Ajustes(navController: NavController) {
     val offsetY = remember { Animatable(1000f) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         offsetY.animateTo(
@@ -46,12 +60,12 @@ fun Ajustes(navController: NavController) {
         )
     }
 
-    val context = LocalContext.current
-    val activity = remember(context) {
-        context as? android.app.Activity
+    val scrollState = rememberScrollState()
+    val permisoArchivos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
     }
-
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -74,8 +88,6 @@ fun Ajustes(navController: NavController) {
                 }
             })
 
-            val scrollState = rememberScrollState()
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -92,9 +104,7 @@ fun Ajustes(navController: NavController) {
                     modifier = Modifier.padding(vertical = 10.dp)
                 )
 
-                AjusteItem("Tema")
-                AjusteItem("Notificaciones")
-                AjusteItem("Autoguardado")
+                AjustePersistente("Tema")
 
                 Text(
                     text = "PERMISOS",
@@ -106,9 +116,9 @@ fun Ajustes(navController: NavController) {
 
                 PermisoItem("Cámara", Manifest.permission.CAMERA)
                 PermisoItem("Micrófono", Manifest.permission.RECORD_AUDIO)
-                PermisoItem("Galería", Manifest.permission.READ_EXTERNAL_STORAGE)
+                PermisoItem("Archivos", permisoArchivos) // 👈 USA LA VARIABLE AQUÍ
                 PermisoItem("Ubicación", Manifest.permission.ACCESS_FINE_LOCATION)
-
+                PermisoItem("Notificaciones", Manifest.permission.POST_NOTIFICATIONS)
 
                 Spacer(modifier = Modifier.height(30.dp))
 
@@ -127,8 +137,13 @@ fun Ajustes(navController: NavController) {
 }
 
 @Composable
-fun AjusteItem(titulo: String) {
-    var isChecked by remember { mutableStateOf(false) }
+fun AjustePersistente(titulo: String) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val key = booleanPreferencesKey(titulo)
+
+    val isCheckedFlow = context.dataStore.data.map { it[key] ?: false }
+    val isChecked = isCheckedFlow.collectAsState(initial = false)
 
     Row(
         modifier = Modifier
@@ -138,21 +153,39 @@ fun AjusteItem(titulo: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(titulo, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        BotonActivarNotis(checked = isChecked) { isChecked = it }
+        BotonActivarNotis(checked = isChecked.value) {
+            scope.launch {
+                context.dataStore.edit { settings ->
+                    settings[key] = it
+                }
+            }
+        }
     }
 }
 
 @Composable
 fun PermisoItem(nombre: String, permiso: String) {
     val context = LocalContext.current
-    val permisoConcedido = remember {
+    val activity = remember { context as? android.app.Activity }
+    var permisoConcedido by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, permiso) == PackageManager.PERMISSION_GRANTED
         )
     }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        permisoConcedido.value = isGranted
+        permisoConcedido = isGranted
+    }
+
+    fun solicitarPermiso() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(activity!!, permiso)) {
+            // Si ya lo denegó antes y no se puede volver a mostrar automáticamente
+            activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", context.packageName, null)
+            })
+        } else {
+            launcher.launch(permiso)
+        }
     }
 
     Row(
@@ -164,14 +197,11 @@ fun PermisoItem(nombre: String, permiso: String) {
     ) {
         Text(nombre, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-        BotonActivarNotis(checked = permisoConcedido.value) {
-            if (!permisoConcedido.value) {
-                launcher.launch(permiso)
-            }
+        BotonActivarNotis(checked = permisoConcedido) {
+            solicitarPermiso()
         }
     }
 }
-
 
 
 @Composable
