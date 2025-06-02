@@ -1,5 +1,7 @@
 package com.example.uniqueartifacts
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -22,18 +24,25 @@ import com.example.uniqueartifacts.views.Puntos_Ofertas
 import com.example.uniqueartifacts.views.RegistroScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.uniqueartifacts.supabase.SupabaseClientProvider
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.example.uniqueartifacts.views.CanjearCuponScreen
 import com.example.uniqueartifacts.views.ConfirmarPedido
 import com.example.uniqueartifacts.views.FormularioCompra
 import com.example.uniqueartifacts.views.Guardados
+import com.example.uniqueartifacts.views.Notificaciones
+import com.example.uniqueartifacts.views.OfertasScreen
+import com.example.uniqueartifacts.views.Premium
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
     guardadosViewModel: GuardadosViewModel,
     carritoViewModel: CarritoViewModel,
-    detalleProductoViewModel: DetalleProductoViewModel
+    detalleProductoViewModel: DetalleProductoViewModel,
+    notificacionesViewModel : NotificacionesViewModel
 ) {
     NavHost(navController = navHostController, startDestination = "pantallaCarga") {
         composable("pantallaCarga") { PantallaCarga(navHostController) }
@@ -42,9 +51,24 @@ fun NavigationWrapper(
         composable("registroScreen") { RegistroScreen(navHostController) }
         composable("perfil") { PerfilScreen(navHostController) }
         composable(route = "editarfoto") { EditarFotoScreen(navHostController) }
-        composable(route = "buscador") { Buscador(navHostController) }
+        composable(route = "buscador") { Buscador(navHostController, carritoViewModel) }
         composable(route = "ajustes") {Ajustes(navHostController) }
-        composable(route = "guardados") { Guardados(navHostController, guardadosViewModel, carritoViewModel) }
+        composable(route = "ofertas") { OfertasScreen(navHostController, carritoViewModel,detalleProductoViewModel,guardadosViewModel ) }
+        composable("guardados") {
+            Guardados(
+                navController = navHostController,
+                guardadosViewModel = guardadosViewModel,
+                carritoViewModel = carritoViewModel,
+                notificacionesViewModel = notificacionesViewModel // ✅ Añade esto
+            )
+        }
+        composable("notificaciones") {
+            Notificaciones(
+                navController = navHostController,
+                viewModel = notificacionesViewModel
+            )
+        }
+
         composable("puntosOfertas") {
             Puntos_Ofertas(navController = navHostController)
         }
@@ -59,7 +83,15 @@ fun NavigationWrapper(
             FormularioCompra(
                 navController = navHostController,
                 carritoViewModel = carritoViewModel,
-                detalleProductoViewModel = detalleProductoViewModel
+                detalleProductoViewModel = detalleProductoViewModel,
+                notificacionesViewModel = notificacionesViewModel
+            )
+        }
+        composable(route = "premium") {
+            Premium(
+                navController = navHostController,
+                supabase = SupabaseClientProvider.getClient(),
+                viewModel = notificacionesViewModel,
             )
         }
 
