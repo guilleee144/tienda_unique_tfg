@@ -71,6 +71,12 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     var searchText by remember { mutableStateOf("") }
     var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
     val categorias = categoryToTable.values.toList()
+    val currentUser = FirebaseAuth.getInstance().currentUser?.uid
+
+    LaunchedEffect(currentUser) {
+        guardadosViewModel.cargarProductosGuardadosDesdeReferencias()
+    }
+
 
     LaunchedEffect(selectedCategory) {
         productos = withContext(Dispatchers.IO) {
@@ -389,7 +395,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
                                     )
-                                    val productosGuardados by guardadosViewModel.productosGuardados.collectAsState()
+
 
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -397,8 +403,10 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                                     ) {
                                         itemsIndexed(list) { index, producto ->
                                             key("${producto.id ?: "null"}_$index") {
-                                                val estaGuardado =
-                                                    guardadosViewModel.productoEstaGuardado(producto)
+                                                val productosGuardados by guardadosViewModel.productosGuardados.collectAsState()
+                                                val estaGuardado = productosGuardados.any { it.id == producto.id }
+
+
 
                                                 Box(
                                                     modifier = Modifier
