@@ -13,13 +13,14 @@ import kotlinx.atomicfu.TraceBase.None.append
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class GuardadosViewModel : ViewModel() {
 
     private val _productosGuardados = MutableStateFlow<List<Producto>>(emptyList())
-    val productosGuardados: StateFlow<List<Producto>> = _productosGuardados
+    val productosGuardados: StateFlow<List<Producto>> = _productosGuardados.asStateFlow()
 
     private val supabase = SupabaseClientProvider.getClient()
     private val currentUid = FirebaseAuth.getInstance().currentUser?.uid
@@ -30,13 +31,17 @@ class GuardadosViewModel : ViewModel() {
 
         if (yaGuardado) {
             listaActual.removeAll { it.id == producto.id }
-            currentUid?.let { eliminarProducto(it, producto.id) }
+            producto.id?.let { id ->
+                currentUid?.let { eliminarProducto(it, id) }
+            }
         } else {
             listaActual.add(producto)
             currentUid?.let { guardarProducto(it, producto) }
-        }
 
+
+        }
         _productosGuardados.value = listaActual
+        cargarProductosGuardadosDesdeReferencias() // 🔄 Fuerza recarga
     }
 
     fun cargarProductosGuardadosDesdeReferencias() {
@@ -110,16 +115,22 @@ class GuardadosViewModel : ViewModel() {
 
 
 
-    fun eliminarProducto(uid: String, productoId: Int?) {
-        if (productoId == null) return
+    fun eliminarProducto(uid: String, productoId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 supabase.from("productos_guardados")
                     .delete {
-                        append(Columns.raw("uid"), "eq.$uid")
-                        append(Columns.raw("producto_id"), "eq.$productoId")
+                        filter {
+                            eq("uid", uid)
+                            eq("producto_id", productoId)
+                        }
                     }
-            } catch (_: Exception) {}
+                // Opcional: recargar productos después de eliminar
+                cargarProductosGuardadosDesdeReferencias()
+            } catch (e: Exception) {
+                println("🔥 Error al eliminar producto guardado: ${e.message}")
+            }
         }
     }
+
 }
