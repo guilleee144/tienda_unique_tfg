@@ -24,6 +24,7 @@ import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
+import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
 import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -33,13 +34,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel, notificacionesViewModel: NotificacionesViewModel ) {
+fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewModel, carritoViewModel: CarritoViewModel, notificacionesViewModel: NotificacionesViewModel, detalleProductoViewModel: DetalleProductoViewModel ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var searchText by remember { mutableStateOf("") }
     var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
     val categorias = categoryToTable.values.toList()
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
+    guardadosViewModel.limpiarGuardados()
+
+
+    LaunchedEffect(Unit) {
+        guardadosViewModel.cargarProductosGuardadosDesdeReferencias()
+    }
+
     val totalCount = totalProductos.size
 
     val productosGuardados by guardadosViewModel.productosGuardados.collectAsState()
@@ -247,8 +255,10 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color.White)
                                             .clickable {
+                                                detalleProductoViewModel.productoSeleccionado.value = producto
                                                 navController.navigate("detallesProducto")
                                             }
+
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(8.dp),
@@ -284,26 +294,36 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                                         .padding(6.dp)
                                                         .size(22.dp)
                                                         .clickable {
-                                                            guardadosViewModel.toggleGuardado(producto)
-                                                            val estaAhoraGuardado = guardadosViewModel.productoEstaGuardado(producto)
-                                                            if (estaAhoraGuardado) {
-                                                                notificacionesViewModel.agregar(
-                                                                    Notificacion(
-                                                                        icono = R.drawable.descuento, // Usa un ícono que tengas
-                                                                        titulo = "Producto guardado",
-                                                                        descripcion = "${producto.producto} ha sido añadido a tus favoritos."
+                                                            val uid = FirebaseAuth.getInstance().currentUser?.uid
+                                                            if (uid != null && producto.id != null) {
+                                                                val estaAhoraGuardado = guardadosViewModel.productoEstaGuardado(producto)
+
+                                                                if (estaAhoraGuardado) {
+                                                                    guardadosViewModel.eliminarProducto(uid, producto.id!!)
+                                                                    notificacionesViewModel.agregar(
+                                                                        Notificacion(
+                                                                            icono = R.drawable.alerta,
+                                                                            titulo = "Producto eliminado",
+                                                                            descripcion = "${producto.producto} ha sido eliminado de tus guardados."
+                                                                        )
                                                                     )
-                                                                )
-                                                            } else {
-                                                                notificacionesViewModel.agregar(
-                                                                    Notificacion(
-                                                                        icono = R.drawable.alerta, // O el ícono de papelera
-                                                                        titulo = "Producto eliminado",
-                                                                        descripcion = "${producto.producto} ha sido eliminado de tus guardados."
+                                                                } else {
+                                                                    guardadosViewModel.guardarProducto(uid, producto)
+                                                                    notificacionesViewModel.agregar(
+                                                                        Notificacion(
+                                                                            icono = R.drawable.descuento,
+                                                                            titulo = "Producto guardado",
+                                                                            descripcion = "${producto.producto} ha sido añadido a tus favoritos."
+                                                                        )
                                                                     )
-                                                                )
+                                                                }
+
+                                                                // 🔁 Recargar los productos guardados actualizados
+                                                                guardadosViewModel.cargarProductosGuardadosDesdeReferencias()
                                                             }
                                                         }
+
+
                                                 )
                                             }
 
@@ -353,6 +373,8 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                                 AddCardButton(navController)
                             }
                         }
+                        Spacer(modifier = Modifier.height(120.dp)) // 🔽 Deja espacio para que no tape el último producto
+
                     }
                 }
 
