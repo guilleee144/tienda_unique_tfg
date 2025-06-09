@@ -3,6 +3,7 @@ package com.example.uniqueartifacts.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.uniqueartifacts.model.Producto
+import com.example.uniqueartifacts.model.ProductoGuardadoDTO
 import com.example.uniqueartifacts.model.ProductoGuardadoInsert
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -39,23 +40,40 @@ class GuardadosViewModel : ViewModel() {
     }
 
     fun cargarProductosGuardadosDesdeReferencias() {
-        currentUid?.let { uid ->
-            viewModelScope.launch {
-                val productos = withContext(Dispatchers.IO) {
-                    try {
-                        supabase.from("productos_guardados")
-                            .select {
-                                append(Columns.raw("uid"), "eq.$uid")
-                            }
-                            .decodeList<Producto>()
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                val listaDTO = withContext(Dispatchers.IO) {
+                    supabase.from("productos_guardados")
+                        .select {
+                            filter { eq("uid", uid) }
+                        }
+                        .decodeList<ProductoGuardadoDTO>()
                 }
+
+                val productos = listaDTO.map { dto ->
+                    Producto(
+                        id = dto.producto_id,
+                        producto = dto.producto,
+                        precio = dto.precio,
+                        imagen = dto.imagen,
+                        imagen2 = dto.imagen2,
+                        imagen3 = dto.imagen3,
+                        stock = dto.stock,
+                        categoria = dto.categoria,
+                        subcategoria = dto.subcategoria,
+                        grupo = dto.grupo
+                    )
+                }
+
                 _productosGuardados.value = productos
+            } catch (e: Exception) {
+                println("❌ Error al cargar productos guardados: ${e.message}")
+                _productosGuardados.value = emptyList()
             }
         }
     }
+
 
     fun productoEstaGuardado(producto: Producto): Boolean {
         return _productosGuardados.value.any { it.id == producto.id }
@@ -85,6 +103,9 @@ class GuardadosViewModel : ViewModel() {
                 println("🔥 Error insertando producto guardado: ${e.message}")
             }
         }
+    }
+    fun limpiarGuardados() {
+        _productosGuardados.value = emptyList()
     }
 
 
