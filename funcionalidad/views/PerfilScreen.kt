@@ -97,7 +97,7 @@ fun PerfilScreen(navController: NavController) {
             IconButton(onClick = {
                 scope.launch {
                     FirebaseAuth.getInstance().signOut()
-                    navController.navigate("pantallaLogin")
+                    navController.navigate("loginScreen")
                 }
             }) {
                 Image(
