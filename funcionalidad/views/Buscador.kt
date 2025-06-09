@@ -30,13 +30,14 @@ import com.example.uniqueartifacts.R
 import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
+import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel) {
+fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel, detalleProductoViewModel: DetalleProductoViewModel) {
     val scope = rememberCoroutineScope()
     var productosSugeridos by remember { mutableStateOf<List<Producto>>(emptyList()) }
     var searchText by remember { mutableStateOf("") }
@@ -136,7 +137,7 @@ fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel) {
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(productosSugeridos) { producto ->
-                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel)
+                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel, detalleProductoViewModel= detalleProductoViewModel)
                     }
 
                 }
@@ -150,7 +151,7 @@ fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel) {
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(resultadosBusqueda) { producto ->
-                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel)
+                        SugerenciaItem(producto = producto, navController = navController, carritoViewModel = carritoViewModel, detalleProductoViewModel= detalleProductoViewModel)
                     }
 
                 }
@@ -226,18 +227,19 @@ fun Buscador(navController: NavController, carritoViewModel: CarritoViewModel) {
 fun SugerenciaItem(
     producto: Producto,
     navController: NavController,
-    carritoViewModel: CarritoViewModel
+    carritoViewModel: CarritoViewModel,
+    detalleProductoViewModel: DetalleProductoViewModel
+
 ) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    val safeNombre = Uri.encode(producto.producto)
-                    val safeImagen = Uri.encode(producto.imagen ?: "")
-                    navController.navigate("detallesProducto?id=${producto.id}&nombre=$safeNombre&imagen=$safeImagen&precio=${producto.precio.toFloat()}")
-
+                    detalleProductoViewModel.productoSeleccionado.value = producto
+                    navController.navigate("detallesProducto")
                 }
+
 
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
