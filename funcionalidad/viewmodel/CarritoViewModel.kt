@@ -39,6 +39,9 @@ class CarritoViewModel : ViewModel() {
             if (it.producto.id == productoId) it.copy(cantidad = it.cantidad + 1) else it
         }
     }
+    fun vaciarCarrito() {
+        _productosEnCarrito.value = emptyList()
+    }
 
     fun decrementarCantidad(productoId: Int) {
         _productosEnCarrito.value = _productosEnCarrito.value.mapNotNull {
