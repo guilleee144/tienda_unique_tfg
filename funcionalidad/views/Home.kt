@@ -78,22 +78,34 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     }
 
 
-    LaunchedEffect(selectedCategory) {
-        productos = withContext(Dispatchers.IO) {
+    var destacadosCargados by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (!destacadosCargados) {
+            destacadosCargados = true
             val supabase = SupabaseClientProvider.getClient()
-            if (selectedCategory == null) {
+            productos = withContext(Dispatchers.IO) {
                 val cartas = supabase.from("productos_cartas").select().decodeList<Producto>()
                 val figuras = supabase.from("productos_figuras").select().decodeList<Producto>()
                 val funkos = supabase.from("productos_funkos").select().decodeList<Producto>()
                 val camisetas = supabase.from("productos_camisetas").select().decodeList<Producto>()
                 val tazas = supabase.from("productos_tazas").select().decodeList<Producto>()
                 (cartas + figuras + funkos + camisetas + tazas).shuffled().take(10)
-            } else {
+            }
+        }
+    }
+
+    LaunchedEffect(selectedCategory) {
+        if (selectedCategory != null) {
+            val supabase = SupabaseClientProvider.getClient()
+            productos = withContext(Dispatchers.IO) {
                 val tableName = categoryToTable[selectedCategory]
                 tableName?.let { supabase.from(it).select().decodeList<Producto>() } ?: emptyList()
             }
         }
     }
+
+
 
     LaunchedEffect(searchText) {
         if (searchText.isBlank()) {
@@ -308,6 +320,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
                         // Contenido scrollable
                     Box(modifier = Modifier.weight(1f)) {
                         Column(
