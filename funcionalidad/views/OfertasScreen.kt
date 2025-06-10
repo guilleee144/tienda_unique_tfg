@@ -112,12 +112,15 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
             // 2. Si hay ofertas y no han expirado, usar esas
             if (data.isNotEmpty()) {
                 val ultimaFecha = Date.from(Instant.parse(data.first().fecha_generacion))
+                fechaGeneracion = ultimaFecha // 🟢 Esto habilita el contador de tiempo
+
                 val dias = ChronoUnit.DAYS.between(ultimaFecha.toInstant(), fechaActual.toInstant())
                 if (dias < 7) {
                     println("✅ Ofertas existentes cargadas")
                     return@withContext data.first().ofertas
                 }
             }
+
 
             // 3. Generar nuevas ofertas
             val tablas = listOf("productos_figuras", "productos_funkos", "productos_cartas", "productos_camisetas", "productos_tazas")
@@ -393,7 +396,9 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .weight(1f) // 🟢 Permite que la barra inferior se vea
+                            .padding(bottom = 10.dp) // 🟢 Espacio para barra inferior
                     ) {
                         itemsIndexed(productosOferta.chunked(2)) { _, fila ->
                             Row(
@@ -456,6 +461,75 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
                                         }
                                     }
 
+                                }
+                            }
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(20.dp)
+                                .background(Color.Black)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .background(Color.Black)
+                        ) {
+                            val currentRoute = navController.currentBackStackEntry?.destination?.route
+                            val items = listOf(
+                                Triple("HOME", if (currentRoute == "pantallaHome") R.drawable.logo_rojo else R.drawable.logo_gris, "pantallaHome"),
+                                Triple("BUSCAR", if (currentRoute == "buscador") R.drawable.lupa else R.drawable.lupa_a, "buscador"),
+                                Triple("OFERTAS", R.drawable.rebajas, "ofertas"),
+                                Triple("GUARDADOS", R.drawable.guardado, "guardados"),
+                                Triple("AJUSTES", R.drawable.ajustes, "ajustes")
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceAround,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                items.forEach { (label, icon, route) ->
+                                    Button(
+                                        onClick = {
+                                            if (route != currentRoute) {
+                                                navController.navigate(route) {
+                                                    popUpTo("pantallaHome") { inclusive = false }
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                                        contentPadding = PaddingValues(0.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Image(
+                                                painter = painterResource(id = icon),
+                                                contentDescription = label,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = label,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (currentRoute == route) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (currentRoute == route) Color.White else Color.Gray,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 4.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
