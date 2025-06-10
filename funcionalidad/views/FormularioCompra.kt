@@ -25,7 +25,9 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.uniqueartifacts.R
+import com.example.uniqueartifacts.model.PedidoSerializable
 import com.example.uniqueartifacts.model.Producto
+import com.example.uniqueartifacts.model.ProductoPedido
 import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
@@ -36,6 +38,14 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.util.Locale.filter
+import kotlinx.serialization.json.Json
+
+
+
 
 @Composable
 fun FormularioCompra(
@@ -295,26 +305,86 @@ fun FormularioCompra(
                                         val client = SupabaseClientProvider.getClient()
 
                                         try {
-                                            client.from("pedidos").insert(
-                                                mapOf(
-                                                    "uid" to userId,
-                                                    "nombre" to nombre,
-                                                    "apellidos" to apellidos,
-                                                    "email" to email,
-                                                    "tarjeta" to tarjeta,
-                                                    "fecha" to fecha,
-                                                    "cvv" to cvv,
-                                                    "total" to total,
-                                                    "productos" to productosEnCarrito.map {
-                                                        mapOf(
-                                                            "id" to it.producto.id,
-                                                            "nombre" to it.producto.producto,
-                                                            "cantidad" to it.cantidad,
-                                                            "precio" to it.producto.precio
-                                                        )
-                                                    }
+                                            // 1️⃣ Convertir productos a JSON STRING (evita error de serialización)
+                                            val productosPedido = productosEnCarrito.map {
+                                                ProductoPedido(
+                                                    id = it.producto.id ?: 0,
+                                                    nombre = it.producto.producto,
+                                                    cantidad = it.cantidad,
+                                                    precio = it.producto.precio
                                                 )
+                                            }
+// Calcular puntos
+                                            val puntosGanados = (total * 100).toInt()
+
+                                            // Obtener puntos actuales del usuario
+                                            val usuario = client.from("usuarios").select {
+                                                filter {
+                                                    eq("uid", userId)
+                                                }
+                                            }.decodeSingle<UserData>()
+
+                                            val nuevosPuntos = (usuario.puntos ?: 0) + puntosGanados
+
+                                            val pedido = PedidoSerializable(
+                                                uid = userId,
+                                                nombre = nombre,
+                                                apellidos = apellidos,
+                                                email = email,
+                                                tarjeta = tarjeta,
+                                                fecha = fecha,
+                                                cvv = cvv,
+                                                total = total,
+                                                productos = productosPedido
                                             )
+                                            client.from("pedidos").insert(pedido)
+                                            carritoViewModel.vaciarCarrito()
+                                            val tablas = listOf("productos_figuras", "productos_funkos", "productos_tazas", "productos_camisetas", "productos_cartas")
+
+                                            productosEnCarrito.forEach { item ->
+                                                val idProducto = item.producto.id ?: return@forEach
+                                                val cantidadComprada = item.cantidad
+
+                                                for (tabla in tablas) {
+                                                    try {
+                                                        val productoActual =
+                                                            client.from(tabla).select {
+                                                                filter { eq("id", idProducto) }
+                                                            }.decodeSingle<Producto>()
+
+                                                        val nuevoStock = maxOf(
+                                                            (productoActual.stock
+                                                                ?: 0) - cantidadComprada, 0
+                                                        )
+
+                                                        client.from(tabla).update({
+                                                            set("stock", nuevoStock)
+                                                        }) {
+                                                            filter { eq("id", idProducto) }
+                                                        }
+                                                        break // Producto encontrado, salimos del loop
+                                                    } catch (e: Exception) {
+                                                    }
+                                                }
+                                            }
+
+                                            // 5️⃣ Guardar nuevos puntos
+                                            client.from("usuarios").update({
+                                                set("puntos", nuevosPuntos)
+                                            }) {
+                                                filter {
+                                                    eq("uid", userId)
+                                                }
+                                            }
+
+
+
+
+
+
+
+
+                                            // 6️⃣ Mostrar notificación
                                             notificacionesViewModel.agregar(
                                                 Notificacion(
                                                     icono = R.drawable.caja_icono,
@@ -322,9 +392,12 @@ fun FormularioCompra(
                                                     descripcion = "Tu pedido ha sido registrado correctamente. ¡Gracias por tu compra!"
                                                 )
                                             )
-                                            navController.navigate("confirmacionPedido")
+
+                                            // 7️⃣ Redirigir a pantalla de puntos y ofertas
+                                            navController.navigate("puntosOfertas")
+
                                         } catch (e: Exception) {
-                                            println("Error al guardar el pedido: $e")
+                                            println("❌ Error al guardar el pedido: $e")
                                         }
                                     }
                                 },
@@ -339,7 +412,8 @@ fun FormularioCompra(
                                 Text("Pagar - %.2f€".format(total))
                             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+
+                            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "Powered by UNIQUE",
