@@ -28,6 +28,7 @@ import com.example.uniqueartifacts.model.Producto
 import com.example.uniqueartifacts.model.UserData
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,8 @@ fun Carrito(navController: NavController, carritoViewModel: CarritoViewModel = v
     var resultadosBusqueda by remember { mutableStateOf<List<Producto>>(emptyList()) }
     val categorias = categoryToTable.values.toList()
     val totalCount = totalProductos
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+    val contadorNotificaciones = notificacionesViewModel.notificaciones.size
 
     // Búsqueda en tiempo real
     LaunchedEffect(searchText) {
@@ -78,7 +81,7 @@ fun Carrito(navController: NavController, carritoViewModel: CarritoViewModel = v
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
+                    MenuLateral(navController = navController,contador = contadorNotificaciones ) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
