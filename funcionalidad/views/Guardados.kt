@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -42,6 +43,8 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
     val categorias = categoryToTable.values.toList()
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     guardadosViewModel.limpiarGuardados()
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+    val contadorNotificaciones = notificacionesViewModel.notificaciones.size
 
 
     LaunchedEffect(Unit) {
@@ -81,7 +84,7 @@ fun Guardados(navController: NavController, guardadosViewModel: GuardadosViewMod
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
+                    MenuLateral(navController = navController, contador = contadorNotificaciones) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
