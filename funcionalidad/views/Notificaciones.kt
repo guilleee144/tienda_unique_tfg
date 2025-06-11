@@ -210,7 +210,7 @@ fun notificarEvento(tipo: String, viewModel: NotificacionesViewModel) {
             Notificacion(R.drawable.alerta, "Premium cancelado", "Tu suscripción ha sido cancelada.")
         )
         "oferta_guardado" -> viewModel.agregar(
-            Notificacion(R.drawable.descuento, "¡Descuento en producto guardado!", "Uno de tus productos favoritos está en oferta.")
+            Notificacion(R.drawable.descuento, "¡Descuento en productos!", "Hay nuevos productos en oferta para ti.")
         )
         "entregado" -> viewModel.agregar(
             Notificacion(R.drawable.caja_icono, "Pedido entregado", "Tu pedido llegó con éxito.")
