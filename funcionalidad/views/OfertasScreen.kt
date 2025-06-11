@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -38,6 +39,7 @@ import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.CarritoViewModel
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
 import com.example.uniqueartifacts.viewmodel.GuardadosViewModel
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +56,7 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewModel, detalleProductoViewModel: DetalleProductoViewModel, guardadosViewModel: GuardadosViewModel) {
+fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewModel, detalleProductoViewModel: DetalleProductoViewModel, guardadosViewModel: GuardadosViewModel, notificacionesViewModel: NotificacionesViewModel) {
     val scope = rememberCoroutineScope()
     var productosOferta by remember { mutableStateOf<List<Oferta>>(emptyList()) }
 
@@ -71,6 +73,8 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     val totalCount = totalProductos.size
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+    val contadorNotificaciones = notificacionesViewModel.notificaciones.size
 
 
 
@@ -117,6 +121,7 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
                 val dias = ChronoUnit.DAYS.between(ultimaFecha.toInstant(), fechaActual.toInstant())
                 if (dias < 7) {
                     println("✅ Ofertas existentes cargadas")
+                    notificarEvento("oferta_guardado", notificacionesViewModel)
                     return@withContext data.first().ofertas
                 }
             }
@@ -156,6 +161,7 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
                     filter { eq("id", 1) }
                 }
                 client.from("ofertas_generales").insert(registro)
+                notificarEvento("oferta_guardado", notificacionesViewModel)
             } catch (e: Exception) {
                 println("❌ ERROR al guardar ofertas generales: ${e.message}")
             }
@@ -183,7 +189,7 @@ fun OfertasScreen(navController: NavController,carritoViewModel: CarritoViewMode
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
+                    MenuLateral(navController = navController,contador = contadorNotificaciones ) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
