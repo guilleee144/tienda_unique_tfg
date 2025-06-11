@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -59,6 +60,10 @@ fun FormularioCompra(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     val totalCount = totalProductos.size
+    val snackbarHostState = remember { SnackbarHostState() }
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+    val contadorNotificaciones = notificacionesViewModel.notificaciones.size
+
 
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
@@ -107,7 +112,7 @@ fun FormularioCompra(
                         modifier = Modifier.fillMaxWidth(0.75f),
                         drawerContainerColor = Color.Black
                     ) {
-                        MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
+                        MenuLateral(navController = navController, contador = contadorNotificaciones) { scope.launch { drawerState.close() } }
                     }
                     Box(
                         modifier = Modifier
@@ -385,13 +390,9 @@ fun FormularioCompra(
 
 
                                             // 6️⃣ Mostrar notificación
-                                            notificacionesViewModel.agregar(
-                                                Notificacion(
-                                                    icono = R.drawable.caja_icono,
-                                                    titulo = "Compra confirmada",
-                                                    descripcion = "Tu pedido ha sido registrado correctamente. ¡Gracias por tu compra!"
-                                                )
-                                            )
+                                            notificarEvento("compra", notificacionesViewModel)
+                                            snackbarHostState.showSnackbar("✅ Pedido realizado correctamente")
+
 
                                             // 7️⃣ Redirigir a pantalla de puntos y ofertas
                                             navController.navigate("puntosOfertas")
