@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -47,6 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.uniqueartifacts.supabase.SupabaseClientProvider
 import com.example.uniqueartifacts.viewmodel.DetalleProductoViewModel
+import com.example.uniqueartifacts.viewmodel.NotificacionesViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -65,6 +67,8 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
     val scope = rememberCoroutineScope()
     val totalProductos by carritoViewModel.productosEnCarrito.collectAsState(initial = emptyList())
     val totalCount = totalProductos.size
+    val notificacionesViewModel: NotificacionesViewModel = viewModel()
+    val contadorNotificaciones = notificacionesViewModel.notificaciones.size
 
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
@@ -136,7 +140,7 @@ fun Home(navController: NavController, guardadosViewModel: GuardadosViewModel, c
                     modifier = Modifier.fillMaxWidth(0.75f),
                     drawerContainerColor = Color.Black
                 ) {
-                    MenuLateral(navController = navController) { scope.launch { drawerState.close() } }
+                    MenuLateral(navController = navController, contador = contadorNotificaciones ) { scope.launch { drawerState.close() } }
                 }
                 Box(
                     modifier = Modifier
@@ -617,7 +621,7 @@ fun CategoriaItem(titulo: String, imagenRes: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun MenuLateral(navController: NavController, onClose: () -> Unit) {
+fun MenuLateral(navController: NavController,  contador: Int,onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var userData by remember { mutableStateOf<UserData?>(null) }
 
@@ -801,6 +805,21 @@ fun MenuLateral(navController: NavController, onClose: () -> Unit) {
                     contentDescription = "Notificaciones",
                     modifier = Modifier.size(24.dp)
                 )
+                if (contador > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .background(Color.Red, shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = contador.toString(),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.width(35.dp))
                 Text(
                     text = "Notificaciones",
